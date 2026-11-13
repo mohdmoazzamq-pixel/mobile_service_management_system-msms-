@@ -12,8 +12,9 @@ async function register(req, res, next) {
   const client = await getClient();
 
   try {
+    const cleanEmail = email.trim().toLowerCase();
     // Check if email already exists
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+    const existing = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
     if (existing.rowCount > 0) {
       client.release();
       return sendError(res, 'Email address is already registered', 409);
@@ -27,10 +28,10 @@ async function register(req, res, next) {
 
     // Insert user (role is forced to customer for public registration)
     const userRes = await client.query(
-      `INSERT INTO users (name, email, phone, password_hash, role)
-       VALUES ($1, $2, $3, $4, 'customer')
+      `INSERT INTO users (name, email, phone, password_hash, role, is_active)
+       VALUES ($1, $2, $3, $4, 'customer', true)
        RETURNING id, name, email, phone, role, created_at`,
-      [name, email, phone || null, passwordHash]
+      [name.trim(), cleanEmail, phone && phone.trim() ? phone.trim() : null, passwordHash]
     );
 
     const newUser = userRes.rows[0];
@@ -40,7 +41,7 @@ async function register(req, res, next) {
       `INSERT INTO customers (user_id, address, city)
        VALUES ($1, $2, $3)
        RETURNING id, address, city`,
-      [newUser.id, address || null, city || null]
+      [newUser.id, address && address.trim() ? address.trim() : null, city && city.trim() ? city.trim() : null]
     );
 
     await client.query('COMMIT');
@@ -80,14 +81,15 @@ async function register(req, res, next) {
 }
 
 async function login(req, res, next) {
-  const { email, password } = req.body;
+  const { email, password, selectedRole } = req.body;
 
   try {
+    const cleanEmail = email ? email.trim() : '';
     const userRes = await query(
       `SELECT id, name, email, phone, password_hash, role, is_active 
        FROM users 
-       WHERE email = $1`,
-      [email]
+       WHERE LOWER(email) = LOWER($1)`,
+      [cleanEmail]
     );
 
     if (userRes.rowCount === 0) {
@@ -103,6 +105,20 @@ async function login(req, res, next) {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return sendError(res, 'Invalid email or password', 401);
+    }
+
+    // Strict Role-Based Verification
+    if (selectedRole) {
+      const expectedRole = String(selectedRole).trim().toLowerCase();
+      const actualRole = String(user.role).trim().toLowerCase();
+      if (actualRole !== expectedRole) {
+        const prettyExpected = expectedRole.charAt(0).toUpperCase() + expectedRole.slice(1);
+        return sendError(
+          res,
+          `Access denied: This account is not registered as a ${prettyExpected}. Please select the correct role tab.`,
+          403
+        );
+      }
     }
 
     let customerId = null;

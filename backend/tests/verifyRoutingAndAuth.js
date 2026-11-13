@@ -8,6 +8,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const app = require('../src/app');
 const { generateToken } = require('../src/utils/jwt');
+const { pool } = require('../src/config/database');
 
 async function runTests() {
   console.log('========================================================================');
@@ -227,8 +228,16 @@ async function runTests() {
   );
 
   // Generate a mock reset token for end-to-end testing of reset-password endpoint
-  const testEmail = 'john.customer@msms.local';
-  const testPayload = { id: 1, email: testEmail, type: 'password_reset' };
+  const testEmail = 'reset.test.user@msms.local';
+  try {
+    await pool.query(
+      "INSERT INTO users (name, email, phone, password_hash, role, is_active) VALUES ('Reset Tester', $1, '9999999999', 'fakehash', 'customer', true) ON CONFLICT (email) DO NOTHING",
+      [testEmail]
+    );
+  } catch (e) {}
+  const testUserRes = await pool.query('SELECT id FROM users WHERE email = $1', [testEmail]).catch(() => ({ rows: [{ id: 1 }] }));
+  const testUserId = testUserRes.rows && testUserRes.rows[0] ? testUserRes.rows[0].id : 1;
+  const testPayload = { id: testUserId, email: testEmail, type: 'password_reset' };
   const validResetToken = generateToken(testPayload);
 
   // Test reset-password with missing token
@@ -272,8 +281,9 @@ async function runTests() {
     'API-RP-04'
   );
 
-  // Clean up server
+  // Clean up server & db pool
   await new Promise(resolve => server.close(resolve));
+  await pool.end().catch(() => {});
 
   console.log('\n========================================================================');
   console.log(`  Verification Completed: ${passed} / ${total} tests passed.`);
@@ -281,6 +291,8 @@ async function runTests() {
 
   if (passed !== total) {
     process.exit(1);
+  } else {
+    process.exit(0);
   }
 }
 

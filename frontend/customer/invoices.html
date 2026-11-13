@@ -250,14 +250,27 @@
           </div>
         `;
 
-        const modal = new bootstrap.Modal(document.getElementById('invoiceDetailModal'));
+        const modalEl = document.getElementById('invoiceDetailModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
       } catch (err) {
         UI.showToast(err.message || 'Failed to open invoice', 'error');
       }
     }
+    window.viewInvoiceModal = viewInvoiceModal;
 
-    document.addEventListener('DOMContentLoaded', loadInvoices);
+    function initInvoicesPage() {
+      const user = Auth.requireAuth(['customer']);
+      if (!user) return;
+      loadInvoices();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initInvoicesPage);
+    } else {
+      initInvoicesPage();
+    }
+    window.addEventListener('msms:routechange', initInvoicesPage);
   </script>
 </body>
 </html>

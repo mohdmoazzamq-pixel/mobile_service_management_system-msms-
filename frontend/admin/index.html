@@ -268,7 +268,18 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadAdminDashboard);
+    function initAdminDashboardPage() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadAdminDashboard();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminDashboardPage);
+    } else {
+      initAdminDashboardPage();
+    }
+    window.addEventListener('msms:routechange', initAdminDashboardPage);
   </script>
 </body>
 </html>

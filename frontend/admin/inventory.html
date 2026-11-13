@@ -432,7 +432,21 @@
       searchTimeout = setTimeout(loadParts, 400);
     });
 
-    document.addEventListener('DOMContentLoaded', loadParts);
+    window.openAdjustModal = openAdjustModal;
+    window.openEditPartModal = openEditPartModal;
+
+    function initAdminInventory() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadParts();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminInventory);
+    } else {
+      initAdminInventory();
+    }
+    window.addEventListener('msms:routechange', initAdminInventory);
   </script>
 </body>
 </html>

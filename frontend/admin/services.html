@@ -239,7 +239,21 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadServices);
+    window.openEditService = openEditService;
+    window.deleteService = deleteService;
+
+    function initAdminServices() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadServices();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminServices);
+    } else {
+      initAdminServices();
+    }
+    window.addEventListener('msms:routechange', initAdminServices);
   </script>
 </body>
 </html>

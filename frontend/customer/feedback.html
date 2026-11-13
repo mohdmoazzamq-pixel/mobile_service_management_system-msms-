@@ -187,7 +187,18 @@
       }
     });
 
-    document.addEventListener('DOMContentLoaded', loadRepairsForFeedback);
+    function initFeedbackPage() {
+      const user = Auth.requireAuth(['customer']);
+      if (!user) return;
+      loadRepairsForFeedback();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFeedbackPage);
+    } else {
+      initFeedbackPage();
+    }
+    window.addEventListener('msms:routechange', initFeedbackPage);
   </script>
 </body>
 </html>

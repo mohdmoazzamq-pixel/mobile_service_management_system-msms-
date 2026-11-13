@@ -347,7 +347,18 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', initWorkbench);
+    function runInitWorkbench() {
+      const user = Auth.requireAuth(['technician']);
+      if (!user) return;
+      initWorkbench();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runInitWorkbench);
+    } else {
+      runInitWorkbench();
+    }
+    window.addEventListener('msms:routechange', runInitWorkbench);
   </script>
 </body>
 </html>

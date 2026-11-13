@@ -60,12 +60,12 @@ CREATE TABLE devices (
     customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
-    imei VARCHAR(30),
+    imei VARCHAR(30) UNIQUE,
     serial_number VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (imei IS NULL OR length(imei) BETWEEN 8 AND 30)
 );
-CREATE UNIQUE INDEX uq_devices_imei ON devices(imei) WHERE imei IS NOT NULL;
+CREATE INDEX idx_devices_customer ON devices(customer_id);
 
 -- 5. Services Table
 CREATE TABLE services (

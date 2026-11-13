@@ -85,49 +85,61 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/router.js"></script>
   <script>
-    const form = document.getElementById('registerForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const alertBox = document.getElementById('alertBox');
+    function initRegisterPage() {
+      const form = document.getElementById('registerForm');
+      if (!form || form._msmsInit) return;
+      form._msmsInit = true;
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      alertBox.innerHTML = '';
-      submitBtn.disabled = true;
-      btnSpinner.classList.remove('d-none');
-      btnText.textContent = 'Registering...';
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const alertBox = document.getElementById('alertBox');
 
-      const payload = {
-        name: document.getElementById('name').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        password: document.getElementById('password').value,
-        phone: document.getElementById('phone').value.trim(),
-        address: document.getElementById('address').value.trim(),
-        city: document.getElementById('city').value.trim()
-      };
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.innerHTML = '';
+        submitBtn.disabled = true;
+        btnSpinner.classList.remove('d-none');
+        btnText.textContent = 'Registering account...';
 
-      try {
-        const res = await API.post('/auth/register', payload);
-        API.setToken(res.data.token);
-        API.setUser(res.data.user);
+        const payload = {
+          name: document.getElementById('name').value.trim(),
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+          phone: document.getElementById('phone').value.trim(),
+          address: document.getElementById('address').value.trim(),
+          city: document.getElementById('city').value.trim()
+        };
 
-        UI.showToast('Account registered successfully! Redirecting...', 'success');
-        setTimeout(() => {
-          window.location.href = '/customer/index.html';
-        }, 800);
-      } catch (err) {
-        alertBox.innerHTML = `
-          <div class="alert alert-danger py-2 small d-flex align-items-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <div>${err.message || 'Registration failed'}</div>
-          </div>
-        `;
-        submitBtn.disabled = false;
-        btnSpinner.classList.add('d-none');
-        btnText.textContent = 'Complete Registration';
-      }
-    });
+        try {
+          const res = await API.post('/auth/register', payload);
+          API.setToken(res.data.token);
+          API.setUser(res.data.user);
+
+          UI.showToast('Account registered successfully! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = '/customer/dashboard';
+          }, 800);
+        } catch (err) {
+          alertBox.innerHTML = `
+            <div class="alert alert-danger py-2 small d-flex align-items-center" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <div>${err.message || 'Registration failed'}</div>
+            </div>
+          `;
+          submitBtn.disabled = false;
+          btnSpinner.classList.add('d-none');
+          btnText.textContent = 'Complete Registration';
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initRegisterPage);
+    } else {
+      initRegisterPage();
+    }
+    window.addEventListener('msms:routechange', initRegisterPage);
   </script>
 </body>
 </html>

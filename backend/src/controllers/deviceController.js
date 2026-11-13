@@ -32,7 +32,8 @@ async function listDevices(req, res, next) {
 }
 
 async function createDevice(req, res, next) {
-  const { brand, model, imei, serialNumber, customerId } = req.body;
+  const { brand, model, imei, serialNumber, serial_number, customerId } = req.body;
+  const rawSerial = serialNumber || serial_number;
 
   try {
     if (!brand || !brand.trim() || !model || !model.trim()) {
@@ -46,6 +47,18 @@ async function createDevice(req, res, next) {
       } else {
         return sendError(res, 'customerId is required when creating device as administrator', 400);
       }
+    } else if (req.user.role === 'customer' && !targetCustomerId) {
+      const custFind = await query('SELECT id FROM customers WHERE user_id = $1', [req.user.id]);
+      if (custFind.rowCount > 0) {
+        targetCustomerId = custFind.rows[0].id;
+      } else {
+        const custCreate = await query(
+          'INSERT INTO customers (user_id) VALUES ($1) RETURNING id',
+          [req.user.id]
+        );
+        targetCustomerId = custCreate.rows[0].id;
+      }
+      req.user.customer_id = targetCustomerId;
     }
 
     if (!targetCustomerId) {
@@ -69,7 +82,7 @@ async function createDevice(req, res, next) {
       `INSERT INTO devices (customer_id, brand, model, imei, serial_number)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [targetCustomerId, brand.trim(), model.trim(), cleanImei, serialNumber ? serialNumber.trim() : null]
+      [targetCustomerId, brand.trim(), model.trim(), cleanImei, rawSerial && rawSerial.trim() ? rawSerial.trim() : null]
     );
 
     return sendSuccess(res, result.rows[0], 'Device registered successfully', 201);

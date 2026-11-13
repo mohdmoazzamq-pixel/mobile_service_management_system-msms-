@@ -99,7 +99,10 @@ async function runAcceptanceTests() {
     try {
       if (tc.id === 'TC-05') {
         if (dbAvailable) {
-          const custToken = generateToken({ id: 999, email: 'fake.cust@msms.local', role: 'customer' });
+          const custUser = await pool.query("SELECT id, email, role FROM users WHERE role = 'customer' AND is_active = true LIMIT 1");
+          const custId = custUser.rowCount > 0 ? custUser.rows[0].id : 999;
+          const custEmail = custUser.rowCount > 0 ? custUser.rows[0].email : 'fake.cust@msms.local';
+          const custToken = generateToken({ id: custId, email: custEmail, role: 'customer' });
           const res = await apiCall('GET', '/api/admin/dashboard', null, custToken);
           passed = (res.status === 403);
           detail = `HTTP Status: ${res.status} (Denied with 403 Forbidden)`;

@@ -312,7 +312,18 @@
       searchTimeout = setTimeout(loadCustomers, 400);
     });
 
-    document.addEventListener('DOMContentLoaded', loadCustomers);
+    function initAdminCustomers() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadCustomers();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminCustomers);
+    } else {
+      initAdminCustomers();
+    }
+    window.addEventListener('msms:routechange', initAdminCustomers);
   </script>
 </body>
 </html>

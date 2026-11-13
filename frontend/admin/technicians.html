@@ -254,7 +254,20 @@
       }
     });
 
-    document.addEventListener('DOMContentLoaded', loadTechnicians);
+    window.openEditModal = openEditModal;
+
+    function initAdminTechnicians() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadTechnicians();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminTechnicians);
+    } else {
+      initAdminTechnicians();
+    }
+    window.addEventListener('msms:routechange', initAdminTechnicians);
   </script>
 </body>
 </html>

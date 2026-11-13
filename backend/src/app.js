@@ -32,8 +32,9 @@ app.use(helmet({
 const allowedOrigin = process.env.FRONTEND_ORIGIN || '*';
 app.use(cors({
   origin: allowedOrigin === '*' ? true : allowedOrigin,
+  credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Body parsers
@@ -54,13 +55,13 @@ const pageRoutes = [
   { paths: ['/forgot-password', '/forgot-password.html'], file: 'forgot-password.html' },
   { paths: ['/reset-password', '/reset-password.html'], file: 'reset-password.html' },
   { paths: ['/404', '/404.html'], file: '404.html' },
-  { paths: ['/customer', '/customer/', '/customer/index', '/customer/index.html'], file: 'customer/index.html' },
+  { paths: ['/customer', '/customer/', '/customer/index', '/customer/index.html', '/customer/dashboard'], file: 'customer/index.html' },
   { paths: ['/customer/book', '/customer/book.html'], file: 'customer/book.html' },
   { paths: ['/customer/devices', '/customer/devices.html'], file: 'customer/devices.html' },
   { paths: ['/customer/tracking', '/customer/tracking.html'], file: 'customer/tracking.html' },
   { paths: ['/customer/invoices', '/customer/invoices.html'], file: 'customer/invoices.html' },
   { paths: ['/customer/feedback', '/customer/feedback.html'], file: 'customer/feedback.html' },
-  { paths: ['/admin', '/admin/', '/admin/index', '/admin/index.html'], file: 'admin/index.html' },
+  { paths: ['/admin', '/admin/', '/admin/index', '/admin/index.html', '/admin/dashboard'], file: 'admin/index.html' },
   { paths: ['/admin/bookings', '/admin/bookings.html'], file: 'admin/bookings.html' },
   { paths: ['/admin/customers', '/admin/customers.html'], file: 'admin/customers.html' },
   { paths: ['/admin/inventory', '/admin/inventory.html'], file: 'admin/inventory.html' },
@@ -68,7 +69,7 @@ const pageRoutes = [
   { paths: ['/admin/reports', '/admin/reports.html'], file: 'admin/reports.html' },
   { paths: ['/admin/services', '/admin/services.html'], file: 'admin/services.html' },
   { paths: ['/admin/technicians', '/admin/technicians.html'], file: 'admin/technicians.html' },
-  { paths: ['/technician', '/technician/', '/technician/index', '/technician/index.html'], file: 'technician/index.html' },
+  { paths: ['/technician', '/technician/', '/technician/index', '/technician/index.html', '/technician/dashboard'], file: 'technician/index.html' },
   { paths: ['/technician/repair-detail', '/technician/repair-detail.html'], file: 'technician/repair-detail.html' }
 ];
 

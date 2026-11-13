@@ -194,7 +194,18 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadTechnicianJobs);
+    function initTechnicianIndex() {
+      const user = Auth.requireAuth(['technician']);
+      if (!user) return;
+      loadTechnicianJobs();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTechnicianIndex);
+    } else {
+      initTechnicianIndex();
+    }
+    window.addEventListener('msms:routechange', initTechnicianIndex);
   </script>
 </body>
 </html>

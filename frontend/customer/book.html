@@ -13,7 +13,7 @@
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
     <div class="container">
-      <a class="navbar-brand text-primary" href="/customer/index.html">
+      <a class="navbar-brand text-primary" href="/customer/dashboard">
         <span class="brand-icon"><i class="bi bi-phone"></i></span>
         MSMS Customer Portal
       </a>
@@ -23,7 +23,7 @@
 
       <div class="collapse navbar-collapse" id="navContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
-          <li class="nav-item"><a class="nav-link" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/dashboard"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
           <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
           <li class="nav-item"><a class="nav-link active" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
           <li class="nav-item"><a class="nav-link" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
@@ -56,9 +56,9 @@
                 <div class="mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <label for="deviceId" class="form-label fw-semibold small mb-0">Select Device <span class="text-danger">*</span></label>
-                    <a href="/customer/devices.html" class="small text-primary text-decoration-none">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-semibold" data-bs-toggle="modal" data-bs-target="#quickRegisterDeviceModal" id="btnOpenDeviceModal">
                       <i class="bi bi-plus-circle me-1"></i>Register new device
-                    </a>
+                    </button>
                   </div>
                   <select class="form-select" id="deviceId" required>
                     <option value="">-- Choose registered device --</option>
@@ -124,105 +124,240 @@
     </div>
   </main>
 
+  <!-- Register New Device Modal -->
+  <div class="modal fade" id="quickRegisterDeviceModal" tabindex="-1" aria-labelledby="quickRegisterDeviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold" id="quickRegisterDeviceModalLabel">
+            <i class="bi bi-phone text-primary me-2"></i>Register New Smartphone
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="quickRegisterDeviceForm">
+          <div class="modal-body p-4">
+            <div id="quickDeviceAlert"></div>
+
+            <div class="mb-3">
+              <label for="devBrand" class="form-label fw-semibold small">Manufacturer / Brand <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="devBrand" required placeholder="Apple, Samsung, Google, Xiaomi...">
+            </div>
+
+            <div class="mb-3">
+              <label for="devModel" class="form-label fw-semibold small">Model Name / Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="devModel" required placeholder="iPhone 14 Pro, Galaxy S23 Ultra...">
+            </div>
+
+            <div class="mb-3">
+              <label for="devImei" class="form-label fw-semibold small">IMEI Number (Optional)</label>
+              <input type="text" class="form-control" id="devImei" placeholder="15-digit number (dial *#06#)">
+              <div class="form-text small">Between 8 and 30 characters.</div>
+            </div>
+
+            <div class="mb-3">
+              <label for="devSerial" class="form-label fw-semibold small">Serial Number (Optional)</label>
+              <input type="text" class="form-control" id="devSerial" placeholder="Hardware serial number">
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" id="saveQuickDeviceBtn" class="btn btn-primary btn-sm fw-semibold">
+              <span id="saveQuickDeviceText">Save & Select Device</span>
+              <span id="saveQuickDeviceSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/router.js"></script>
   <script>
-    Auth.requireAuth(['customer']);
+    function initBookPage() {
+      const user = Auth.requireAuth(['customer']);
+      if (!user) return;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const preselectedDeviceId = urlParams.get('deviceId');
+      const urlParams = new URLSearchParams(window.location.search);
+      let preselectedDeviceId = urlParams.get('deviceId');
 
-    async function loadFormDropdowns() {
-      try {
-        const [devRes, servRes] = await Promise.all([
-          API.get('/devices'),
-          API.get('/services')
-        ]);
-
+      async function loadFormDropdowns() {
         const deviceSelect = document.getElementById('deviceId');
-        const devices = devRes.data || [];
+        const serviceSelect = document.getElementById('serviceId');
+        if (!deviceSelect || !serviceSelect) return;
 
-        if (devices.length === 0) {
-          deviceSelect.innerHTML = '<option value="">No devices registered. Please register a device first!</option>';
-          UI.showToast('Please register a device before booking a repair.', 'warning');
-        } else {
-          deviceSelect.innerHTML = '<option value="">-- Choose registered device --</option>' +
-            devices.map(d => `
-              <option value="${d.id}" ${preselectedDeviceId == d.id ? 'selected' : ''}>
-                ${d.brand} ${d.model} ${d.imei ? `(IMEI: ${d.imei})` : ''}
+        try {
+          const [devRes, servRes] = await Promise.all([
+            API.get('/devices'),
+            API.get('/services')
+          ]);
+
+          const devices = (devRes && devRes.data) ? devRes.data : (Array.isArray(devRes) ? devRes : []);
+          if (devices.length === 0) {
+            deviceSelect.innerHTML = '<option value="">No devices registered. Click "+ Register new device" above!</option>';
+          } else {
+            deviceSelect.innerHTML = '<option value="">-- Choose registered device --</option>' +
+              devices.map(d => `
+                <option value="${d.id}" ${String(preselectedDeviceId) === String(d.id) ? 'selected' : ''}>
+                  ${d.brand} ${d.model} ${d.imei ? `(IMEI: ${d.imei})` : ''}
+                </option>
+              `).join('');
+          }
+
+          const services = (servRes && servRes.data) ? servRes.data : (Array.isArray(servRes) ? servRes : []);
+          serviceSelect.innerHTML = '<option value="">-- Select specific repair service or leave for diagnosis --</option>' +
+            services.map(s => `
+              <option value="${s.id}">
+                ${s.service_name} (Base Price: ${UI.formatCurrency(s.base_price)})
               </option>
             `).join('');
+
+          // Set default minimum date to today
+          const prefDate = document.getElementById('preferredDate');
+          if (prefDate) {
+            const today = new Date().toISOString().split('T')[0];
+            prefDate.min = today;
+            if (!prefDate.value) prefDate.value = today;
+          }
+        } catch (err) {
+          UI.showToast(err.message || 'Failed to load options', 'error');
         }
+      }
 
-        const serviceSelect = document.getElementById('serviceId');
-        const services = servRes.data || [];
-        serviceSelect.innerHTML = '<option value="">-- Select specific repair service or leave for diagnosis --</option>' +
-          services.map(s => `
-            <option value="${s.id}">
-              ${s.service_name} (Base Price: ${UI.formatCurrency(s.base_price)})
-            </option>
-          `).join('');
+      // Initial load
+      loadFormDropdowns();
 
-        // Set default minimum date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('preferredDate').min = today;
-        document.getElementById('preferredDate').value = today;
+      // Quick Device Registration Form Handler
+      const quickDeviceForm = document.getElementById('quickRegisterDeviceForm');
+      if (quickDeviceForm && !quickDeviceForm._msmsInit) {
+        quickDeviceForm._msmsInit = true;
+        quickDeviceForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const alertArea = document.getElementById('quickDeviceAlert');
+          const btn = document.getElementById('saveQuickDeviceBtn');
+          const btnText = document.getElementById('saveQuickDeviceText');
+          const spinner = document.getElementById('saveQuickDeviceSpinner');
 
-      } catch (err) {
-        UI.showToast(err.message || 'Failed to load form options', 'error');
+          alertArea.innerHTML = '';
+          btn.disabled = true;
+          spinner.classList.remove('d-none');
+          btnText.textContent = 'Saving device...';
+
+          const brand = document.getElementById('devBrand').value.trim();
+          const model = document.getElementById('devModel').value.trim();
+          const imei = document.getElementById('devImei').value.trim();
+          const serialNumber = document.getElementById('devSerial').value.trim();
+
+          try {
+            const res = await API.post('/devices', { brand, model, imei, serialNumber });
+            const newDev = res.data;
+
+            // Immediately append and select in deviceId dropdown
+            const deviceSelect = document.getElementById('deviceId');
+            if (deviceSelect) {
+              const opt = document.createElement('option');
+              opt.value = newDev.id;
+              opt.textContent = `${newDev.brand} ${newDev.model} ${newDev.imei ? '(IMEI: ' + newDev.imei + ')' : ''}`;
+              opt.selected = true;
+              deviceSelect.appendChild(opt);
+              preselectedDeviceId = newDev.id;
+            }
+
+            // Reset modal form
+            quickDeviceForm.reset();
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            btnText.textContent = 'Save & Select Device';
+
+            // Close modal
+            const modalEl = document.getElementById('quickRegisterDeviceModal');
+            const bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            bsModal.hide();
+
+            UI.showToast(`Device ${newDev.brand} ${newDev.model} registered successfully!`, 'success');
+          } catch (err) {
+            alertArea.innerHTML = `
+              <div class="alert alert-danger py-2 small d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>${err.message || 'Failed to register device'}</div>
+              </div>
+            `;
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            btnText.textContent = 'Save & Select Device';
+          }
+        });
+      }
+
+      // Booking Form Handler
+      const bookForm = document.getElementById('bookForm');
+      if (bookForm && !bookForm._msmsInit) {
+        bookForm._msmsInit = true;
+        bookForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const alertBox = document.getElementById('alertBox');
+          const submitBtn = document.getElementById('submitBtn');
+          const btnText = document.getElementById('btnText');
+          const btnSpinner = document.getElementById('btnSpinner');
+
+          alertBox.innerHTML = '';
+          submitBtn.disabled = true;
+          btnSpinner.classList.remove('d-none');
+          btnText.textContent = 'Submitting Booking...';
+
+          const devId = document.getElementById('deviceId').value;
+          if (!devId) {
+            alertBox.innerHTML = '<div class="alert alert-warning py-2 small">Please select or register a device before booking.</div>';
+            submitBtn.disabled = false;
+            btnSpinner.classList.add('d-none');
+            btnText.innerHTML = '<i class="bi bi-send-check me-2"></i>Submit Repair Booking';
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('deviceId', devId);
+          const serviceVal = document.getElementById('serviceId').value;
+          if (serviceVal) formData.append('serviceId', serviceVal);
+          formData.append('problemCategory', document.getElementById('problemCategory').value);
+          formData.append('problemDescription', document.getElementById('problemDescription').value.trim());
+          const prefDate = document.getElementById('preferredDate').value;
+          if (prefDate) formData.append('preferredDate', prefDate);
+
+          const files = document.getElementById('images').files;
+          for (let i = 0; i < files.length; i++) {
+            formData.append('images', files[i]);
+          }
+
+          try {
+            const res = await API.post('/bookings', formData);
+            UI.showToast('Repair booking created successfully!', 'success');
+
+            const bookingNumber = res.data.booking_number;
+            setTimeout(() => {
+              window.location.href = `/customer/tracking.html?code=${encodeURIComponent(bookingNumber)}`;
+            }, 900);
+          } catch (err) {
+            alertBox.innerHTML = `
+              <div class="alert alert-danger py-2 small">
+                ${err.message || 'Failed to submit repair request'}
+              </div>
+            `;
+            submitBtn.disabled = false;
+            btnSpinner.classList.add('d-none');
+            btnText.innerHTML = '<i class="bi bi-send-check me-2"></i>Submit Repair Booking';
+          }
+        });
       }
     }
 
-    const form = document.getElementById('bookForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const alertBox = document.getElementById('alertBox');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      alertBox.innerHTML = '';
-      submitBtn.disabled = true;
-      btnSpinner.classList.remove('d-none');
-      btnText.textContent = 'Submitting Booking...';
-
-      const formData = new FormData();
-      formData.append('deviceId', document.getElementById('deviceId').value);
-      const serviceVal = document.getElementById('serviceId').value;
-      if (serviceVal) formData.append('serviceId', serviceVal);
-      formData.append('problemCategory', document.getElementById('problemCategory').value);
-      formData.append('problemDescription', document.getElementById('problemDescription').value.trim());
-      const prefDate = document.getElementById('preferredDate').value;
-      if (prefDate) formData.append('preferredDate', prefDate);
-
-      const files = document.getElementById('images').files;
-      for (let i = 0; i < files.length; i++) {
-        formData.append('images', files[i]);
-      }
-
-      try {
-        const res = await API.post('/bookings', formData);
-        UI.showToast('Repair booking created successfully!', 'success');
-
-        const bookingNumber = res.data.booking_number;
-        setTimeout(() => {
-          window.location.href = `/customer/tracking.html?code=${encodeURIComponent(bookingNumber)}`;
-        }, 1000);
-      } catch (err) {
-        alertBox.innerHTML = `
-          <div class="alert alert-danger py-2 small">
-            ${err.message || 'Failed to submit repair request'}
-          </div>
-        `;
-        submitBtn.disabled = false;
-        btnSpinner.classList.add('d-none');
-        btnText.innerHTML = '<i class="bi bi-send-check me-2"></i>Submit Repair Booking';
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', loadFormDropdowns);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initBookPage);
+    } else {
+      initBookPage();
+    }
+    window.addEventListener('msms:routechange', initBookPage);
   </script>
 </body>
 </html>

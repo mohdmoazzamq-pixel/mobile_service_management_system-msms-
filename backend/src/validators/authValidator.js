@@ -43,7 +43,13 @@ const loginRules = [
     .withMessage('Must be a valid email address'),
   body('password')
     .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('Password is required'),
+  body('selectedRole')
+    .optional({ checkFalsy: true })
+    .trim()
+    .toLowerCase()
+    .isIn(['customer', 'technician', 'admin'])
+    .withMessage('Selected role must be customer, technician, or admin')
 ];
 
 const forgotPasswordRules = [

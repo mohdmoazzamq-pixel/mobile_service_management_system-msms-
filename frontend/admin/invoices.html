@@ -439,10 +439,22 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    window.openCreateInvoiceModal = openCreateInvoiceModal;
+    window.viewInvoiceDetail = viewInvoiceDetail;
+
+    function initAdminInvoices() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
       loadInvoices();
       loadRepairsEligibleForInvoice();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminInvoices);
+    } else {
+      initAdminInvoices();
+    }
+    window.addEventListener('msms:routechange', initAdminInvoices);
   </script>
 </body>
 </html>

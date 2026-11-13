@@ -175,18 +175,21 @@
   <script src="/assets/js/auth.js"></script>
   <script src="/assets/js/router.js"></script>
   <script>
-    async function loadServices() {
+    window.loadServices = async function() {
+      const grid = document.getElementById('servicesGrid');
+      if (!grid) return;
+
       try {
         const res = await API.get('/services');
-        const grid = document.getElementById('servicesGrid');
-        if (!res.data || res.data.length === 0) {
-          grid.innerHTML = '<div class="col-12 text-center text-muted">No active services currently listed.</div>';
+        const list = (res && res.data) ? res.data : (res && res.services) ? res.services : (Array.isArray(res) ? res : []);
+        if (!list || list.length === 0) {
+          grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No active repair services currently listed.</div>';
           return;
         }
 
-        grid.innerHTML = res.data.map(s => `
+        grid.innerHTML = list.map(s => `
           <div class="col-md-6 col-lg-4">
-            <div class="card h-100 card-hover p-3">
+            <div class="card h-100 card-hover p-3 border-0 shadow-sm">
               <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                   <div class="stat-icon-wrapper bg-primary-subtle text-primary">
@@ -197,7 +200,7 @@
                   </span>
                 </div>
                 <h5 class="fw-bold text-dark mt-2">${s.service_name}</h5>
-                <p class="text-muted small flex-grow-1">${s.description || 'Comprehensive inspection and component repair.'}</p>
+                <p class="text-muted small flex-grow-1">${s.description || 'Comprehensive inspection, diagnosis, and component repair.'}</p>
                 <a href="/customer/book.html" class="btn btn-outline-primary btn-sm mt-3 fw-medium">
                   Book This Service <i class="bi bi-arrow-right ms-1"></i>
                 </a>
@@ -206,37 +209,43 @@
           </div>
         `).join('');
       } catch (err) {
-        document.getElementById('servicesGrid').innerHTML = `
-          <div class="col-12 text-center text-danger">Unable to connect to backend service. Please check API server.</div>
+        grid.innerHTML = `
+          <div class="col-12 text-center text-muted py-4">
+            <i class="bi bi-info-circle text-warning fs-3 d-block mb-2"></i>
+            <div>Unable to load service catalog (${err.message || 'Check connection'}).</div>
+          </div>
         `;
       }
-    }
+    };
 
-    async function loadFeedback() {
+    window.loadFeedback = async function() {
+      const container = document.getElementById('feedbackContainer');
+      if (!container) return;
+
       try {
         const res = await API.get('/feedback');
-        const container = document.getElementById('feedbackContainer');
-        if (!res.data || res.data.length === 0) {
+        const list = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (!list || list.length === 0) {
           container.innerHTML = '<div class="text-muted small">No reviews yet. Completed repairs will show ratings here.</div>';
           return;
         }
 
-        container.innerHTML = res.data.slice(0, 3).map(f => `
+        container.innerHTML = list.slice(0, 3).map(f => `
           <div class="p-3 bg-white rounded border">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="fw-bold small">${f.customer_name}</span>
+              <span class="fw-bold small">${f.customer_name || 'Verified Customer'}</span>
               <span class="text-warning">
-                ${'★'.repeat(f.rating)}${'☆'.repeat(5 - f.rating)}
+                ${'★'.repeat(f.rating || 5)}${'☆'.repeat(Math.max(0, 5 - (f.rating || 5)))}
               </span>
             </div>
             <div class="text-muted small">${f.comments || 'Great turnaround and repair service!'}</div>
-            <div class="text-secondary small mt-1" style="font-size:0.75rem;">${f.brand} ${f.model} - ${f.service_name || 'Repair'}</div>
+            <div class="text-secondary small mt-1" style="font-size:0.75rem;">${f.brand || ''} ${f.model || ''} - ${f.service_name || 'Repair'}</div>
           </div>
         `).join('');
       } catch (e) {
-        document.getElementById('feedbackContainer').innerHTML = '<div class="text-muted small">Reviews unavailable.</div>';
+        container.innerHTML = '<div class="text-muted small">Customer reviews temporarily unavailable.</div>';
       }
-    }
+    };
 
     async function quickTrack() {
       const code = document.getElementById('trackInput').value.trim();
@@ -323,12 +332,19 @@
       } catch (err) {
         UI.showToast(err.message || 'Booking not found', 'error');
       }
+    };
+
+    function initIndex() {
+      if (typeof window.loadServices === 'function') window.loadServices();
+      if (typeof window.loadFeedback === 'function') window.loadFeedback();
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadServices();
-      loadFeedback();
-    });
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initIndex);
+    } else {
+      initIndex();
+    }
+    window.addEventListener('msms:routechange', initIndex);
   </script>
 </body>
 </html>

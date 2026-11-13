@@ -324,10 +324,22 @@
       searchTimeout = setTimeout(loadBookings, 400);
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    window.openDecisionModal = openDecisionModal;
+    window.openAssignModal = openAssignModal;
+
+    function initAdminBookings() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
       loadTechniciansList();
       loadBookings();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminBookings);
+    } else {
+      initAdminBookings();
+    }
+    window.addEventListener('msms:routechange', initAdminBookings);
   </script>
 </body>
 </html>

@@ -18,7 +18,7 @@ async function seedData() {
     await client.query(`
       INSERT INTO users (name, email, phone, password_hash, role, is_active)
       VALUES ('System Administrator', 'admin@msms.local', '9876543210', $1, 'admin', true)
-      ON CONFLICT (email) DO NOTHING
+      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = true
     `, [passwordHash]);
 
     // 2. Technicians
@@ -31,7 +31,7 @@ async function seedData() {
       const uRes = await client.query(`
         INSERT INTO users (name, email, phone, password_hash, role, is_active)
         VALUES ($1, $2, $3, $4, 'technician', true)
-        ON CONFLICT (email) DO UPDATE SET is_active = true
+        ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = true
         RETURNING id
       `, [t.name, t.email, t.phone, passwordHash]);
 
@@ -39,7 +39,7 @@ async function seedData() {
       await client.query(`
         INSERT INTO technicians (user_id, specialization, experience_years, availability)
         VALUES ($1, $2, $3, 'AVAILABLE')
-        ON CONFLICT (user_id) DO NOTHING
+        ON CONFLICT (user_id) DO UPDATE SET specialization = EXCLUDED.specialization, experience_years = EXCLUDED.experience_years
       `, [userId, t.spec, t.exp]);
     }
 
@@ -54,7 +54,7 @@ async function seedData() {
       const uRes = await client.query(`
         INSERT INTO users (name, email, phone, password_hash, role, is_active)
         VALUES ($1, $2, $3, $4, 'customer', true)
-        ON CONFLICT (email) DO UPDATE SET is_active = true
+        ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = true
         RETURNING id
       `, [c.name, c.email, c.phone, passwordHash]);
 
@@ -62,7 +62,7 @@ async function seedData() {
       const cRes = await client.query(`
         INSERT INTO customers (user_id, address, city)
         VALUES ($1, $2, $3)
-        ON CONFLICT (user_id) DO UPDATE SET address = EXCLUDED.address
+        ON CONFLICT (user_id) DO UPDATE SET address = EXCLUDED.address, city = EXCLUDED.city
         RETURNING id
       `, [userId, c.addr, c.city]);
 
@@ -103,7 +103,7 @@ async function seedData() {
       await client.query(`
         INSERT INTO services (service_name, description, base_price, is_active)
         VALUES ($1, $2, $3, true)
-        ON CONFLICT (service_name) DO UPDATE SET base_price = EXCLUDED.base_price
+        ON CONFLICT (service_name) DO UPDATE SET base_price = EXCLUDED.base_price, is_active = true, description = EXCLUDED.description
       `, [s.name, s.desc, s.price]);
     }
 
@@ -127,19 +127,24 @@ async function seedData() {
       `, [p.name, p.code, p.brand, p.purchase, p.sell, p.qty, p.min]);
 
       const partId = pRes.rows[0].id;
-      // Record initial stock transaction
-      await client.query(`
-        INSERT INTO stock_transactions (part_id, transaction_type, quantity, remarks)
-        VALUES ($1, 'IN', $2, 'Initial stock entry from seed')
-      `, [partId, p.qty]);
+      // Record initial stock transaction if none exists
+      const existingTx = await client.query('SELECT id FROM stock_transactions WHERE part_id = $1 LIMIT 1', [partId]);
+      if (existingTx.rowCount === 0) {
+        await client.query(`
+          INSERT INTO stock_transactions (part_id, transaction_type, quantity, remarks)
+          VALUES ($1, 'IN', $2, 'Initial stock entry from seed')
+        `, [partId, p.qty]);
+      }
     }
 
     await client.query('COMMIT');
     console.log('[SeedData] Seeding completed successfully!');
-    console.log('Test Accounts available:');
-    console.log('  Admin:      admin@msms.local        (Password: Password123!)');
-    console.log('  Technician: tech.alex@msms.local    (Password: Password123!)');
-    console.log('  Customer:   john.customer@msms.local (Password: Password123!)');
+    console.log('Test Accounts available (all default password: Password123!):');
+    console.log('  Admin:      admin@msms.local');
+    console.log('  Technician: tech.alex@msms.local');
+    console.log('  Technician: tech.sarah@msms.local');
+    console.log('  Customer:   john.customer@msms.local');
+    console.log('  Customer:   emily.customer@msms.local');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('[SeedData] Error during seed:', error.message);

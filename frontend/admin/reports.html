@@ -270,7 +270,18 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadReports);
+    function initAdminReports() {
+      const user = Auth.requireAuth(['admin']);
+      if (!user) return;
+      loadReports();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdminReports);
+    } else {
+      initAdminReports();
+    }
+    window.addEventListener('msms:routechange', initAdminReports);
   </script>
 </body>
 </html>

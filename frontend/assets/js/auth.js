@@ -14,12 +14,12 @@ const Auth = {
   getRoleRedirect(role) {
     switch (role) {
       case 'admin':
-        return '/admin/index.html';
+        return '/admin/dashboard';
       case 'technician':
-        return '/technician/index.html';
+        return '/technician/dashboard';
       case 'customer':
       default:
-        return '/customer/index.html';
+        return '/customer/dashboard';
     }
   },
 

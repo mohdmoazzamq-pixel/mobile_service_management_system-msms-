@@ -397,7 +397,16 @@
       `;
     }
 
-    document.addEventListener('DOMContentLoaded', initTracking);
+    function runInitTracking() {
+      initTracking();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runInitTracking);
+    } else {
+      runInitTracking();
+    }
+    window.addEventListener('msms:routechange', runInitTracking);
   </script>
 </body>
 </html>

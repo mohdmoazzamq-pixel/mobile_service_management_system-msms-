@@ -22,6 +22,7 @@
       '/customer': '/customer/index.html',
       '/customer/': '/customer/index.html',
       '/customer/index': '/customer/index.html',
+      '/customer/dashboard': '/customer/index.html',
       '/customer/book': '/customer/book.html',
       '/customer/devices': '/customer/devices.html',
       '/customer/tracking': '/customer/tracking.html',
@@ -30,6 +31,7 @@
       '/admin': '/admin/index.html',
       '/admin/': '/admin/index.html',
       '/admin/index': '/admin/index.html',
+      '/admin/dashboard': '/admin/index.html',
       '/admin/bookings': '/admin/bookings.html',
       '/admin/customers': '/admin/customers.html',
       '/admin/inventory': '/admin/inventory.html',
@@ -40,6 +42,7 @@
       '/technician': '/technician/index.html',
       '/technician/': '/technician/index.html',
       '/technician/index': '/technician/index.html',
+      '/technician/dashboard': '/technician/index.html',
       '/technician/repair-detail': '/technician/repair-detail.html'
     },
 
@@ -218,12 +221,11 @@
       const scripts = doc.querySelectorAll('script');
       scripts.forEach(s => {
         // Only run inline scripts that are not external bundles already loaded
-        if (!s.src) {
+        if (!s.src && s.textContent.trim()) {
           try {
-            const newScript = document.createElement('script');
-            newScript.textContent = s.textContent;
-            document.body.appendChild(newScript);
-            newScript.remove(); // Clean DOM element while leaving execution in context
+            // Execute inside Function scope to prevent variable re-declaration errors across SPA transitions
+            const fn = new Function(s.textContent);
+            fn();
           } catch (e) {
             console.error('[MSMS Router] Script execution error:', e);
           }
@@ -265,8 +267,8 @@
           const href = a.getAttribute('href');
           const target = a.getAttribute('target');
 
-          // Ignore special links or target="_blank"
-          if (!href || href.startsWith('http:') || href.startsWith('https:') || href.startsWith('mailto:') || href.startsWith('tel:') || target === '_blank') {
+          // Ignore special links, modals, or target="_blank"
+          if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('http:') || href.startsWith('https:') || href.startsWith('mailto:') || href.startsWith('tel:') || target === '_blank' || a.hasAttribute('data-bs-toggle') || a.hasAttribute('data-bs-dismiss')) {
             return;
           }
 
