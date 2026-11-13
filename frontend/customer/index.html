@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Dashboard | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand text-primary" href="/customer/index.html">
+        <span class="brand-icon"><i class="bi bi-phone"></i></span>
+        MSMS Customer Portal
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link active" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/feedback.html"><i class="bi bi-star me-1"></i>Reviews</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <!-- Welcome Banner -->
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+          <h3 class="fw-bold text-dark mb-1" id="welcomeMsg">Welcome!</h3>
+          <p class="text-muted small mb-0">Manage your smartphones, check diagnosis updates, and view invoices.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary fw-semibold" onclick="openProfileModal()">
+            <i class="bi bi-person-gear me-1"></i>My Profile
+          </button>
+          <a href="/customer/book.html" class="btn btn-primary fw-semibold shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i>New Repair Request
+          </a>
+          <a href="/customer/devices.html" class="btn btn-outline-secondary fw-semibold">
+            <i class="bi bi-phone me-1"></i>Add Device
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Row -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card p-3 border-0 shadow-sm card-hover">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-primary-subtle text-primary me-3">
+                <i class="bi bi-phone"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Registered Devices</div>
+                <h4 class="fw-bold mb-0 text-dark" id="statDevices">-</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card p-3 border-0 shadow-sm card-hover">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-warning-subtle text-warning me-3">
+                <i class="bi bi-hourglass-split"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Active Bookings</div>
+                <h4 class="fw-bold mb-0 text-dark" id="statActive">-</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card p-3 border-0 shadow-sm card-hover">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-success-subtle text-success me-3">
+                <i class="bi bi-check2-circle"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Completed Repairs</div>
+                <h4 class="fw-bold mb-0 text-dark" id="statCompleted">-</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card p-3 border-0 shadow-sm card-hover">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-info-subtle text-info me-3">
+                <i class="bi bi-receipt"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Invoices Issued</div>
+                <h4 class="fw-bold mb-0 text-dark" id="statInvoices">-</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Bookings Table -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+          <h5 class="fw-bold mb-0 text-dark">Recent Repair Requests</h5>
+          <a href="/customer/book.html" class="btn btn-sm btn-outline-primary">Book Repair</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+              <tr>
+                <th>Booking #</th>
+                <th>Device</th>
+                <th>Problem</th>
+                <th>Status</th>
+                <th>Technician</th>
+                <th>Created</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTableBody">
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                  Loading your repair records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Profile Edit Modal -->
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="bi bi-person-circle text-primary me-2"></i>My Customer Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="profileForm">
+          <div class="modal-body">
+            <div id="profileAlert"></div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="profileName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Email Address</label>
+              <input type="email" class="form-control" id="profileEmail" disabled readonly>
+              <div class="form-text small">Account email cannot be modified.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Phone Number</label>
+              <input type="tel" class="form-control" id="profilePhone">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Street Address</label>
+              <input type="text" class="form-control" id="profileAddress">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">City</label>
+              <input type="text" class="form-control" id="profileCity">
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    const user = Auth.requireAuth(['customer']);
+
+    async function openProfileModal() {
+      try {
+        const res = await API.get('/auth/me');
+        const u = res.data;
+        document.getElementById('profileName').value = u.name || '';
+        document.getElementById('profileEmail').value = u.email || '';
+        document.getElementById('profilePhone').value = u.phone || '';
+        document.getElementById('profileAddress').value = u.address || '';
+        document.getElementById('profileCity').value = u.city || '';
+        document.getElementById('profileAlert').innerHTML = '';
+        const modal = new bootstrap.Modal(document.getElementById('profileModal'));
+        modal.show();
+      } catch (e) {
+        UI.showToast(e.message, 'error');
+      }
+    }
+
+    const profileForm = document.getElementById('profileForm');
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('profileAlert');
+      alertBox.innerHTML = '';
+
+      const name = document.getElementById('profileName').value.trim();
+      const phone = document.getElementById('profilePhone').value.trim();
+      const address = document.getElementById('profileAddress').value.trim();
+      const city = document.getElementById('profileCity').value.trim();
+
+      try {
+        const res = await API.put('/auth/profile', { name, phone, address, city });
+        API.setUser(res.data);
+        UI.showToast('Profile updated successfully!', 'success');
+        document.getElementById('welcomeMsg').textContent = `Welcome back, ${res.data.name}!`;
+
+        const modalEl = document.getElementById('profileModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small">${err.message}</div>`;
+      }
+    });
+
+    async function cancelBooking(id) {
+      if (!confirm('Are you sure you want to cancel this pending repair request?')) return;
+      try {
+        await API.patch(`/bookings/${id}/cancel`, {});
+        UI.showToast('Booking cancelled', 'success');
+        loadDashboard();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    async function loadDashboard() {
+      if (!user) return;
+      document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name}!`;
+
+      try {
+        const [devicesRes, bookingsRes, invoicesRes] = await Promise.all([
+          API.get('/devices'),
+          API.get('/bookings'),
+          API.get('/invoices')
+        ]);
+
+        const devices = devicesRes.data || [];
+        const bookings = bookingsRes.data?.bookings || [];
+        const invoices = invoicesRes.data || [];
+
+        const activeCount = bookings.filter(b => b.booking_status === 'PENDING' || (b.repair_status && !['REPAIR_COMPLETED', 'DELIVERED'].includes(b.repair_status))).length;
+        const completedCount = bookings.filter(b => b.repair_status === 'REPAIR_COMPLETED' || b.repair_status === 'DELIVERED').length;
+
+        document.getElementById('statDevices').textContent = devices.length;
+        document.getElementById('statActive').textContent = activeCount;
+        document.getElementById('statCompleted').textContent = completedCount;
+        document.getElementById('statInvoices').textContent = invoices.length;
+
+        const tbody = document.getElementById('bookingsTableBody');
+        if (bookings.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                You haven't submitted any repair requests yet.<br>
+                <a href="/customer/book.html" class="btn btn-primary btn-sm mt-3">Book Your First Repair</a>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = bookings.slice(0, 10).map(b => `
+          <tr>
+            <td class="fw-bold text-primary">
+              <a href="/customer/tracking.html?code=${encodeURIComponent(b.booking_number)}" class="text-decoration-none">
+                ${b.booking_number}
+              </a>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">${b.brand} ${b.model}</div>
+              <div class="text-muted small" style="font-size:0.75rem;">IMEI: ${b.imei || 'N/A'}</div>
+            </td>
+            <td>
+              <div class="fw-medium text-dark">${b.problem_category}</div>
+              <div class="text-muted small text-truncate" style="max-width: 200px;">${b.problem_description}</div>
+            </td>
+            <td>
+              ${b.repair_status ? UI.getStatusBadge(b.repair_status) : UI.getStatusBadge(b.booking_status)}
+            </td>
+            <td>${b.technician_name ? `<span class="fw-medium text-dark">${b.technician_name}</span>` : '<span class="text-muted small">Unassigned</span>'}</td>
+            <td class="text-muted small">${UI.formatDate(b.created_at)}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="/customer/tracking.html?code=${encodeURIComponent(b.booking_number)}" class="btn btn-outline-primary">
+                  <i class="bi bi-clock-history me-1"></i>Track
+                </a>
+                ${b.booking_status === 'PENDING' ? `
+                  <button class="btn btn-outline-danger" onclick="cancelBooking(${b.id})" title="Cancel Booking">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        UI.showToast(err.message || 'Error loading dashboard data', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>

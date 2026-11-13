@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Invoices | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top no-print">
+    <div class="container">
+      <a class="navbar-brand text-primary" href="/customer/index.html">
+        <span class="brand-icon"><i class="bi bi-phone"></i></span>
+        MSMS Customer Portal
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/customer/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/feedback.html"><i class="bi bi-star me-1"></i>Reviews</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Invoices & Receipts</h3>
+          <p class="text-muted small mb-0">View breakdown of labor, replacement parts, and payment status.</p>
+        </div>
+      </div>
+
+      <!-- Invoices List or Specific Invoice Detail -->
+      <div id="invoiceViewArea">
+        <div class="card p-5 text-center border-0 shadow-sm text-muted">
+          <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+          Loading invoices...
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Invoice Print Modal / Full View Template -->
+  <div class="modal fade" id="invoiceDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom no-print">
+          <h5 class="modal-title fw-bold">Invoice Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 p-md-5 print-invoice-sheet" id="invoicePrintContent">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer bg-light no-print">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print Invoice
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['customer']);
+
+    async function loadInvoices() {
+      const area = document.getElementById('invoiceViewArea');
+      try {
+        const res = await API.get('/invoices');
+        const invoices = res.data || [];
+
+        if (invoices.length === 0) {
+          area.innerHTML = `
+            <div class="card p-5 text-center border-0 shadow-sm bg-white">
+              <i class="bi bi-receipt fs-1 text-muted mb-2"></i>
+              <h5 class="fw-bold text-dark">No Invoices Issued Yet</h5>
+              <p class="text-muted small">Invoices are automatically generated once your repair diagnosis or completion is processed.</p>
+            </div>
+          `;
+          return;
+        }
+
+        area.innerHTML = `
+          <div class="card border-0 shadow-sm bg-white">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Booking Ref</th>
+                    <th>Device</th>
+                    <th>Total</th>
+                    <th>Payment Status</th>
+                    <th>Date Issued</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${invoices.map(inv => `
+                    <tr>
+                      <td class="fw-bold text-dark font-monospace">${inv.invoice_number}</td>
+                      <td>
+                        <a href="/customer/tracking.html?code=${encodeURIComponent(inv.booking_number)}" class="text-decoration-none">
+                          ${inv.booking_number}
+                        </a>
+                      </td>
+                      <td>${inv.brand} ${inv.model}</td>
+                      <td class="fw-bold text-dark fs-6">${UI.formatCurrency(inv.total_amount)}</td>
+                      <td>${UI.getStatusBadge(inv.payment_status)}</td>
+                      <td class="text-muted small">${UI.formatDate(inv.created_at)}</td>
+                      <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" onclick="openInvoice(${inv.id})">
+                          <i class="bi bi-eye me-1"></i>View & Print
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        // Check if query param specifies single invoice
+        const urlParams = new URLSearchParams(window.location.search);
+        const invId = urlParams.get('id');
+        if (invId) {
+          openInvoice(invId);
+        }
+
+      } catch (err) {
+        area.innerHTML = `<div class="alert alert-danger p-4">${err.message}</div>`;
+      }
+    }
+
+    async function openInvoice(id) {
+      try {
+        const res = await API.get(`/invoices/${id}`);
+        const inv = res.data;
+        const container = document.getElementById('invoicePrintContent');
+
+        container.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="brand-icon bg-primary text-white"><i class="bi bi-tools"></i></div>
+                <h4 class="fw-bold text-dark mb-0">MSMS Repair Center</h4>
+              </div>
+              <div class="text-muted small">123 Tech Park Avenue, Central District</div>
+              <div class="text-muted small">support@msms.local | +1 (800) 555-MSMS</div>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark border fs-6 font-monospace mb-1">${inv.invoice_number}</span>
+              <div class="text-muted small">Date: ${UI.formatDate(inv.created_at)}</div>
+              <div class="mt-2">${UI.getStatusBadge(inv.payment_status)}</div>
+            </div>
+          </div>
+
+          <div class="row g-4 mb-4">
+            <div class="col-sm-6">
+              <div class="text-muted small text-uppercase fw-bold mb-1">Billed To:</div>
+              <div class="fw-bold text-dark">${inv.customer_name}</div>
+              <div class="text-muted small">${inv.customer_phone || ''}</div>
+              <div class="text-muted small">${inv.customer_address || ''}, ${inv.customer_city || ''}</div>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+              <div class="text-muted small text-uppercase fw-bold mb-1">Repair Job Reference:</div>
+              <div class="fw-bold text-dark">${inv.brand} ${inv.model}</div>
+              <div class="text-muted small">Booking: <span class="font-monospace">${inv.booking_number}</span></div>
+              <div class="text-muted small">IMEI: ${inv.imei || 'N/A'}</div>
+            </div>
+          </div>
+
+          <table class="table table-bordered mb-4">
+            <thead class="table-light small text-uppercase">
+              <tr>
+                <th>Description</th>
+                <th class="text-center" style="width: 80px;">Qty</th>
+                <th class="text-end" style="width: 120px;">Unit Price</th>
+                <th class="text-end" style="width: 120px;">Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">${inv.service_name || 'Repair Service Diagnostic & Labor'}</div>
+                  <div class="text-muted small">${inv.problem_category}</div>
+                </td>
+                <td class="text-center">1</td>
+                <td class="text-end">${UI.formatCurrency(inv.service_base_price || 0)}</td>
+                <td class="text-end fw-semibold">${UI.formatCurrency(inv.service_base_price || 0)}</td>
+              </tr>
+              ${inv.parts && inv.parts.length > 0 ? inv.parts.map(p => `
+                <tr>
+                  <td>
+                    <div class="fw-semibold text-dark">${p.part_name}</div>
+                    <div class="text-muted small font-monospace">Code: ${p.part_code}</div>
+                  </td>
+                  <td class="text-center">${p.quantity}</td>
+                  <td class="text-end">${UI.formatCurrency(p.unit_price)}</td>
+                  <td class="text-end fw-semibold">${UI.formatCurrency(p.line_total)}</td>
+                </tr>
+              `).join('') : ''}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="3" class="text-end fw-semibold">Subtotal:</td>
+                <td class="text-end fw-semibold">${UI.formatCurrency(inv.subtotal)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-end text-muted small">Tax:</td>
+                <td class="text-end text-muted small">${UI.formatCurrency(inv.tax_amount)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-end text-muted small">Discount:</td>
+                <td class="text-end text-muted small">-${UI.formatCurrency(inv.discount)}</td>
+              </tr>
+              <tr class="fs-5">
+                <td colspan="3" class="text-end fw-bold text-dark">Total Amount Due:</td>
+                <td class="text-end fw-bold text-primary">${UI.formatCurrency(inv.total_amount)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="p-3 bg-light rounded text-muted small">
+            <strong>Payment Method:</strong> ${inv.payment_method || 'CASH'}<br>
+            All hardware repairs carry a 90-day warranty on installed parts and workmanship. Thank you for your business!
+          </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('invoiceDetailModal'));
+        modal.show();
+      } catch (err) {
+        UI.showToast(err.message || 'Failed to open invoice', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadInvoices);
+  </script>
+</body>
+</html>

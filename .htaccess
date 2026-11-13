@@ -1,0 +1,23 @@
+# =====================================================================
+# Apache Web Server Configuration
+# =====================================================================
+
+# 1. Disable Directory Index Listing (prevents raw folder browsing)
+Options -Indexes
+
+# 2. Set default entry point to frontend/index.html
+DirectoryIndex frontend/index.html index.html
+
+# 3. URL Rewriting
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Rewrite root / directly to frontend/index.html
+  RewriteRule ^$ frontend/index.html [L]
+
+  # If request is not for /backend, /database, or /api, map assets to frontend
+  RewriteCond %{REQUEST_URI} !^/(backend|database|api|uploads|frontend)/
+  RewriteCond %{DOCUMENT_ROOT}/frontend/$1 -f [OR]
+  RewriteCond %{DOCUMENT_ROOT}/frontend/$1 -d
+  RewriteRule ^(.*)$ frontend/$1 [L]
+</IfModule>

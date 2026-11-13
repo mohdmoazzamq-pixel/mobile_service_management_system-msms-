@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Invoices | Admin Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom sticky-top shadow-sm no-print">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/admin/index.html">
+        <span class="brand-icon bg-primary text-white"><i class="bi bi-shield-lock"></i></span>
+        MSMS Control Center
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/index.html"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/bookings.html"><i class="bi bi-inbox me-1"></i>Bookings</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/technicians.html"><i class="bi bi-people me-1"></i>Technicians</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/customers.html"><i class="bi bi-person-lines-fill me-1"></i>Customers</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/services.html"><i class="bi bi-list-check me-1"></i>Services</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/inventory.html"><i class="bi bi-box-seam me-1"></i>Inventory</a></li>
+          <li class="nav-item"><a class="nav-link active text-white" href="/admin/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/reports.html"><i class="bi bi-graph-up me-1"></i>Reports</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Billing & Invoices</h3>
+          <p class="text-muted small mb-0">Generate final bills for completed repairs, update payments, and print receipts.</p>
+        </div>
+        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#createInvoiceModal">
+          <i class="bi bi-plus-lg me-1"></i>Generate New Invoice
+        </button>
+      </div>
+
+      <!-- Invoices Table -->
+      <div class="card border-0 shadow-sm bg-white no-print">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+              <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Booking Ref</th>
+                <th>Device</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>Method</th>
+                <th>Date</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="invoicesTbody">
+              <tr>
+                <td colspan="9" class="text-center py-5 text-muted">Loading invoices...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Generate Invoice Modal -->
+  <div class="modal fade" id="createInvoiceModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Generate Repair Invoice</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="createInvoiceForm">
+          <div class="modal-body">
+            <div id="createInvoiceAlert"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Select Active Repair <span class="text-danger">*</span></label>
+              <select class="form-select" id="invoiceRepairSelect" required>
+                <option value="">-- Choose repair to bill --</option>
+              </select>
+              <div class="form-text small">Subtotal will automatically aggregate base service fee + all parts used.</div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Tax Amount ($)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="invoiceTax" value="0.00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Discount ($)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="invoiceDiscount" value="0.00">
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Payment Status</label>
+                <select class="form-select" id="invoicePaymentStatus">
+                  <option value="UNPAID">UNPAID</option>
+                  <option value="PAID">PAID</option>
+                  <option value="PARTIAL">PARTIAL</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Payment Method</label>
+                <select class="form-select" id="invoicePaymentMethod">
+                  <option value="CASH">CASH</option>
+                  <option value="CREDIT_CARD">CREDIT CARD</option>
+                  <option value="DEBIT_CARD">DEBIT CARD</option>
+                  <option value="ONLINE_UPI">ONLINE / UPI</option>
+                  <option value="BANK_TRANSFER">BANK TRANSFER</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Generate Invoice</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Payment Modal -->
+  <div class="modal fade" id="paymentStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Update Payment Status</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="paymentStatusForm">
+          <div class="modal-body">
+            <div id="paymentAlert"></div>
+            <input type="hidden" id="paymentInvoiceId">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Payment Status <span class="text-danger">*</span></label>
+              <select class="form-select" id="updatePaymentStatusSelect" required>
+                <option value="PAID">PAID</option>
+                <option value="UNPAID">UNPAID</option>
+                <option value="PARTIAL">PARTIAL</option>
+                <option value="REFUNDED">REFUNDED</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Payment Method</label>
+              <select class="form-select" id="updatePaymentMethodSelect">
+                <option value="CASH">CASH</option>
+                <option value="CREDIT_CARD">CREDIT CARD</option>
+                <option value="DEBIT_CARD">DEBIT CARD</option>
+                <option value="ONLINE_UPI">ONLINE / UPI</option>
+                <option value="BANK_TRANSFER">BANK TRANSFER</option>
+              </select>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Save Payment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Invoice Modal -->
+  <div class="modal fade" id="invoiceDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom no-print">
+          <h5 class="modal-title fw-bold">Official Invoice</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 p-md-5 print-invoice-sheet" id="invoicePrintContent"></div>
+        <div class="modal-footer bg-light no-print">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print Invoice
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['admin']);
+
+    async function loadInvoices() {
+      const tbody = document.getElementById('invoicesTbody');
+      try {
+        const res = await API.get('/invoices');
+        const invoices = res.data || [];
+
+        if (invoices.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted">No invoices generated yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = invoices.map(inv => `
+          <tr>
+            <td class="fw-bold font-monospace text-dark">${inv.invoice_number}</td>
+            <td class="fw-medium text-dark">${inv.customer_name}</td>
+            <td class="small font-monospace">${inv.booking_number}</td>
+            <td class="small text-muted">${inv.brand} ${inv.model}</td>
+            <td class="fw-bold fs-6 text-dark">${UI.formatCurrency(inv.total_amount)}</td>
+            <td>${UI.getStatusBadge(inv.payment_status)}</td>
+            <td class="small text-muted">${inv.payment_method || '—'}</td>
+            <td class="text-muted small">${UI.formatDate(inv.created_at)}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" onclick="openInvoice(${inv.id})">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-success" onclick="openPaymentModal(${inv.id}, '${inv.payment_status}', '${inv.payment_method || 'CASH'}')">
+                  <i class="bi bi-credit-card"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${err.message}</td></tr>`;
+      }
+    }
+
+    async function loadRepairsEligibleForInvoice() {
+      try {
+        const res = await API.get('/bookings?limit=100');
+        const bookings = res.data?.bookings || [];
+        const eligible = bookings.filter(b => b.repair_id);
+
+        const select = document.getElementById('invoiceRepairSelect');
+        select.innerHTML = '<option value="">-- Choose repair to bill --</option>' +
+          eligible.map(b => `
+            <option value="${b.repair_id}">
+              Repair #${b.repair_id} - ${b.booking_number} (${b.customer_name} - ${b.brand} ${b.model}) [${b.repair_status}]
+            </option>
+          `).join('');
+
+        // Preselect if query param exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const reqRepairId = urlParams.get('repairId');
+        if (reqRepairId) {
+          select.value = reqRepairId;
+          const modal = new bootstrap.Modal(document.getElementById('createInvoiceModal'));
+          modal.show();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const createForm = document.getElementById('createInvoiceForm');
+    createForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('createInvoiceAlert');
+      alertBox.innerHTML = '';
+
+      const repairId = document.getElementById('invoiceRepairSelect').value;
+      const taxAmount = parseFloat(document.getElementById('invoiceTax').value) || 0;
+      const discount = parseFloat(document.getElementById('invoiceDiscount').value) || 0;
+      const paymentStatus = document.getElementById('invoicePaymentStatus').value;
+      const paymentMethod = document.getElementById('invoicePaymentMethod').value;
+
+      try {
+        const res = await API.post('/invoices', { repairId: parseInt(repairId), taxAmount, discount, paymentStatus, paymentMethod });
+        UI.showToast('Invoice generated successfully!', 'success');
+
+        const modalEl = document.getElementById('createInvoiceModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        loadInvoices();
+        openInvoice(res.data.id);
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    function openPaymentModal(id, status, method) {
+      document.getElementById('paymentInvoiceId').value = id;
+      document.getElementById('updatePaymentStatusSelect').value = status;
+      document.getElementById('updatePaymentMethodSelect').value = method || 'CASH';
+      document.getElementById('paymentAlert').innerHTML = '';
+
+      const modal = new bootstrap.Modal(document.getElementById('paymentStatusModal'));
+      modal.show();
+    }
+
+    const paymentForm = document.getElementById('paymentStatusForm');
+    paymentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('paymentInvoiceId').value;
+      const paymentStatus = document.getElementById('updatePaymentStatusSelect').value;
+      const paymentMethod = document.getElementById('updatePaymentMethodSelect').value;
+      const alertBox = document.getElementById('paymentAlert');
+
+      try {
+        await API.patch(`/invoices/${id}/payment`, { paymentStatus, paymentMethod });
+        UI.showToast('Payment status updated', 'success');
+
+        const modalEl = document.getElementById('paymentStatusModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        loadInvoices();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    async function openInvoice(id) {
+      try {
+        const res = await API.get(`/invoices/${id}`);
+        const inv = res.data;
+        const container = document.getElementById('invoicePrintContent');
+
+        container.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="brand-icon bg-primary text-white"><i class="bi bi-tools"></i></div>
+                <h4 class="fw-bold text-dark mb-0">MSMS Repair Center</h4>
+              </div>
+              <div class="text-muted small">123 Tech Park Avenue, Central District</div>
+              <div class="text-muted small">support@msms.local | +1 (800) 555-MSMS</div>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark border fs-6 font-monospace mb-1">${inv.invoice_number}</span>
+              <div class="text-muted small">Date: ${UI.formatDate(inv.created_at)}</div>
+              <div class="mt-2">${UI.getStatusBadge(inv.payment_status)}</div>
+            </div>
+          </div>
+
+          <div class="row g-4 mb-4">
+            <div class="col-sm-6">
+              <div class="text-muted small text-uppercase fw-bold mb-1">Customer:</div>
+              <div class="fw-bold text-dark">${inv.customer_name}</div>
+              <div class="text-muted small">${inv.customer_phone || ''} | ${inv.customer_email || ''}</div>
+              <div class="text-muted small">${inv.customer_address || ''}, ${inv.customer_city || ''}</div>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+              <div class="text-muted small text-uppercase fw-bold mb-1">Device Details:</div>
+              <div class="fw-bold text-dark">${inv.brand} ${inv.model}</div>
+              <div class="text-muted small">Booking: <span class="font-monospace">${inv.booking_number}</span></div>
+              <div class="text-muted small">IMEI: ${inv.imei || 'N/A'}</div>
+            </div>
+          </div>
+
+          <table class="table table-bordered mb-4">
+            <thead class="table-light small text-uppercase">
+              <tr>
+                <th>Description</th>
+                <th class="text-center" style="width: 80px;">Qty</th>
+                <th class="text-end" style="width: 120px;">Unit Price</th>
+                <th class="text-end" style="width: 120px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">${inv.service_name || 'Repair Service Diagnostic & Labor'}</div>
+                  <div class="text-muted small">${inv.problem_category}</div>
+                </td>
+                <td class="text-center">1</td>
+                <td class="text-end">${UI.formatCurrency(inv.service_base_price || 0)}</td>
+                <td class="text-end fw-semibold">${UI.formatCurrency(inv.service_base_price || 0)}</td>
+              </tr>
+              ${inv.parts && inv.parts.length > 0 ? inv.parts.map(p => `
+                <tr>
+                  <td>
+                    <div class="fw-semibold text-dark">${p.part_name}</div>
+                    <div class="text-muted small font-monospace">Code: ${p.part_code}</div>
+                  </td>
+                  <td class="text-center">${p.quantity}</td>
+                  <td class="text-end">${UI.formatCurrency(p.unit_price)}</td>
+                  <td class="text-end fw-semibold">${UI.formatCurrency(p.line_total)}</td>
+                </tr>
+              `).join('') : ''}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="3" class="text-end fw-semibold">Subtotal:</td>
+                <td class="text-end fw-semibold">${UI.formatCurrency(inv.subtotal)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-end text-muted small">Tax:</td>
+                <td class="text-end text-muted small">${UI.formatCurrency(inv.tax_amount)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-end text-muted small">Discount:</td>
+                <td class="text-end text-muted small">-${UI.formatCurrency(inv.discount)}</td>
+              </tr>
+              <tr class="fs-5">
+                <td colspan="3" class="text-end fw-bold text-dark">Total:</td>
+                <td class="text-end fw-bold text-primary">${UI.formatCurrency(inv.total_amount)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="p-3 bg-light rounded text-muted small">
+            <strong>Payment Method:</strong> ${inv.payment_method || 'CASH'}<br>
+            All hardware repairs carry a 90-day warranty on installed parts and workmanship. Thank you!
+          </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('invoiceDetailModal'));
+        modal.show();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadInvoices();
+      loadRepairsEligibleForInvoice();
+    });
+  </script>
+</body>
+</html>

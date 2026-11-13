@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In | Mobile Service Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="bg-light d-flex align-items-center py-5">
+
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-5">
+
+        <div class="text-center mb-4">
+          <a href="/index.html" class="navbar-brand justify-content-center text-primary fs-3 mb-2">
+            <span class="brand-icon"><i class="bi bi-tools"></i></span>
+            MSMS Hub
+          </a>
+          <h4 class="fw-bold text-dark mt-2">Sign in to your account</h4>
+          <p class="text-muted small">Access your service dashboard, repairs & invoices</p>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4">
+          <div class="card-body">
+            <div id="alertBox"></div>
+
+            <form id="loginForm">
+              <div class="mb-3">
+                <label for="email" class="form-label fw-semibold small">Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                  <input type="email" class="form-control" id="email" required placeholder="name@example.com">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label for="password" class="form-label fw-semibold small mb-0">Password</label>
+                  <a href="/forgot-password.html" class="small text-primary text-decoration-none fw-semibold" id="forgotPwdLink">Forgot Password?</a>
+                </div>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                  <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                </div>
+              </div>
+
+              <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                <span id="btnText">Sign In</span>
+                <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+              </button>
+            </form>
+
+            <div class="mt-4 pt-3 border-top text-center">
+              <span class="text-muted small">Don't have an account?</span>
+              <a href="/register.html" class="fw-semibold text-primary ms-1 small">Create account</a>
+            </div>
+
+            <!-- Quick Demo Credential Pills -->
+            <div class="mt-4 p-3 bg-light rounded border">
+              <div class="fw-bold small text-muted text-uppercase mb-2" style="font-size: 0.7rem;">Quick Fill Demo Logins:</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="quickFill('admin@msms.local', 'Password123!')">
+                  <i class="bi bi-shield-lock me-1"></i>Admin
+                </button>
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="quickFill('tech.alex@msms.local', 'Password123!')">
+                  <i class="bi bi-wrench me-1"></i>Technician
+                </button>
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="quickFill('john.customer@msms.local', 'Password123!')">
+                  <i class="bi bi-person me-1"></i>Customer
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="text-center mt-3">
+          <a href="/index.html" class="text-decoration-none text-muted small">
+            <i class="bi bi-arrow-left me-1"></i>Back to home
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Forgot Password Modal -->
+  <div class="modal fade" id="loginForgotModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold"><i class="bi bi-key-fill text-primary me-2"></i>Reset Your Password</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="modalForgotForm">
+          <div class="modal-body p-4">
+            <div id="modalForgotAlert"></div>
+            <p class="text-muted small mb-3">Enter your registered email address to receive password reset instructions.</p>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Registered Email</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control" id="modalForgotEmail" required placeholder="name@example.com">
+              </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <a href="/forgot-password.html" class="small text-muted text-decoration-none">Open dedicated reset page &rarr;</a>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" id="modalForgotBtn" class="btn btn-primary btn-sm fw-semibold">
+              <span id="modalForgotBtnText">Request Reset Link</span>
+              <span id="modalForgotSpinner" class="spinner-border spinner-border-sm ms-1 d-none"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    // If already logged in, redirect directly to portal
+    const existingUser = API.getUser();
+    if (existingUser && API.getToken()) {
+      window.location.href = Auth.getRoleRedirect(existingUser.role);
+    }
+
+    function quickFill(email, pwd) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = pwd;
+    }
+
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const alertBox = document.getElementById('alertBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.innerHTML = '';
+      submitBtn.disabled = true;
+      btnSpinner.classList.remove('d-none');
+      btnText.textContent = 'Verifying...';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await API.post('/auth/login', { email, password });
+        API.setToken(res.data.token);
+        API.setUser(res.data.user);
+
+        UI.showToast('Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = Auth.getRoleRedirect(res.data.user.role);
+        }, 600);
+      } catch (err) {
+        alertBox.innerHTML = `
+          <div class="alert alert-danger py-2 small d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>${err.message || 'Invalid email or password'}</div>
+          </div>
+        `;
+        submitBtn.disabled = false;
+        btnSpinner.classList.add('d-none');
+        btnText.textContent = 'Sign In';
+      }
+    });
+
+    // Modal forgot password handler
+    const modalForgotForm = document.getElementById('modalForgotForm');
+    if (modalForgotForm) {
+      modalForgotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertArea = document.getElementById('modalForgotAlert');
+        const btn = document.getElementById('modalForgotBtn');
+        const btnTxt = document.getElementById('modalForgotBtnText');
+        const spinner = document.getElementById('modalForgotSpinner');
+
+        alertArea.innerHTML = '';
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+        btnTxt.textContent = 'Processing...';
+
+        const email = document.getElementById('modalForgotEmail').value.trim();
+
+        try {
+          const res = await API.post('/auth/forgot-password', { email });
+          const resetUrl = res.data?.resetUrl || `/reset-password.html?token=${encodeURIComponent(res.data.resetToken)}`;
+
+          alertArea.innerHTML = `
+            <div class="alert alert-success py-2 small">
+              <strong>Reset link created!</strong>
+              <div class="mt-1 mb-2">Token generated for ${email}.</div>
+              <a href="${resetUrl}" class="btn btn-sm btn-success w-100 fw-semibold">
+                Proceed to Reset Password
+              </a>
+            </div>
+          `;
+          btn.disabled = false;
+          spinner.classList.add('d-none');
+          btnTxt.textContent = 'Resend Link';
+        } catch (err) {
+          alertArea.innerHTML = `<div class="alert alert-danger py-2 small">${err.message || 'Error requesting reset.'}</div>`;
+          btn.disabled = false;
+          spinner.classList.add('d-none');
+          btnTxt.textContent = 'Request Reset Link';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

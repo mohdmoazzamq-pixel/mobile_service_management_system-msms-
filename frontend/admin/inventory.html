@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spare Parts Inventory | Admin Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/admin/index.html">
+        <span class="brand-icon bg-primary text-white"><i class="bi bi-shield-lock"></i></span>
+        MSMS Control Center
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/index.html"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/bookings.html"><i class="bi bi-inbox me-1"></i>Bookings</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/technicians.html"><i class="bi bi-people me-1"></i>Technicians</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/customers.html"><i class="bi bi-person-lines-fill me-1"></i>Customers</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/services.html"><i class="bi bi-list-check me-1"></i>Services</a></li>
+          <li class="nav-item"><a class="nav-link active text-white" href="/admin/inventory.html"><i class="bi bi-box-seam me-1"></i>Inventory</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/reports.html"><i class="bi bi-graph-up me-1"></i>Reports</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Spare Parts Inventory & Stock Ledger</h3>
+          <p class="text-muted small mb-0">Track hardware stock, manage purchases and selling margins, and reconcile inventory.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" onclick="viewAllTransactions()">
+            <i class="bi bi-journal-text me-1"></i>Stock Transactions
+          </button>
+          <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addPartModal">
+            <i class="bi bi-plus-lg me-1"></i>New Spare Part
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="card border-0 shadow-sm p-3 bg-white mb-4">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7">
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+              <input type="text" id="partSearch" class="form-control" placeholder="Search by part name, SKU / part code, or brand...">
+            </div>
+          </div>
+          <div class="col-md-5 d-flex gap-2 justify-content-md-end">
+            <button class="btn btn-outline-danger" id="lowStockToggleBtn" onclick="toggleLowStockFilter()">
+              <i class="bi bi-exclamation-triangle me-1"></i>Filter Low Stock
+            </button>
+            <button class="btn btn-outline-secondary" onclick="resetPartFilter()">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parts Table -->
+      <div class="card border-0 shadow-sm bg-white">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+              <tr>
+                <th>Part Details</th>
+                <th>Part Code</th>
+                <th>Brand</th>
+                <th>Purchase</th>
+                <th>Selling</th>
+                <th>Current Stock</th>
+                <th>Min. Threshold</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="partsTbody">
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">Loading spare parts inventory...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Add Part Modal -->
+  <div class="modal fade" id="addPartModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Add New Spare Part</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addPartForm">
+          <div class="modal-body">
+            <div id="addPartAlert"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Part Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="partName" required placeholder="iPhone 14 Pro OLED Display Assembly">
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Part Code / SKU <span class="text-danger">*</span></label>
+                <input type="text" class="form-control font-monospace" id="partCode" required placeholder="DISP-IP14P-01">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Brand / Manufacturer</label>
+                <input type="text" class="form-control" id="partBrand" placeholder="Apple OEM">
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Purchase Cost ($) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" class="form-control" id="purchasePrice" required placeholder="140.00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Selling Price ($) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" class="form-control" id="sellingPrice" required placeholder="220.00">
+              </div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Initial Stock Qty <span class="text-danger">*</span></label>
+                <input type="number" min="0" class="form-control" id="stockQuantity" required value="10">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Minimum Alert Level</label>
+                <input type="number" min="0" class="form-control" id="minimumStock" value="3">
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Save Spare Part</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Adjustment Modal -->
+  <div class="modal fade" id="adjustStockModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="adjustModalTitle">Adjust Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="adjustStockForm">
+          <div class="modal-body">
+            <div id="adjustAlert"></div>
+            <input type="hidden" id="adjustPartId">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Action Type <span class="text-danger">*</span></label>
+              <select class="form-select" id="adjustType" required>
+                <option value="IN">Stock IN (Receive Shipment / Purchase)</option>
+                <option value="OUT">Stock OUT (Damaged / Scrapped)</option>
+                <option value="ADJUSTMENT">Stock ADJUSTMENT (Physical Inventory Count Reconcile)</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Quantity <span class="text-danger">*</span></label>
+              <input type="number" min="1" class="form-control" id="adjustQty" required value="5">
+              <div class="form-text small" id="adjustQtyHelp">Quantity to add or deduct.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Remarks / Purchase Order #</label>
+              <input type="text" class="form-control" id="adjustRemarks" placeholder="PO #10492 or damaged in storage">
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Apply Stock Update</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions Ledger Modal -->
+  <div class="modal fade" id="transactionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="txModalTitle">Stock Transaction History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase">
+                <tr>
+                  <th>Part</th>
+                  <th>Type</th>
+                  <th>Quantity</th>
+                  <th>Remarks</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="txTbody">
+                <tr><td colspan="5" class="text-center py-4 text-muted">Loading transactions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['admin']);
+
+    let isLowStockOnly = false;
+
+    async function loadParts() {
+      const search = document.getElementById('partSearch').value.trim();
+      const tbody = document.getElementById('partsTbody');
+
+      let url = '/inventory?';
+      if (search) url += `search=${encodeURIComponent(search)}&`;
+      if (isLowStockOnly) url += `lowStock=true&`;
+
+      try {
+        const res = await API.get(url);
+        const parts = res.data || [];
+
+        if (parts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted">No spare parts found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = parts.map(p => `
+          <tr class="${p.is_low_stock ? 'table-warning' : ''}">
+            <td>
+              <div class="fw-bold text-dark">${p.part_name}</div>
+              ${p.is_low_stock ? '<span class="badge bg-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i>Low Stock Alert</span>' : ''}
+            </td>
+            <td class="font-monospace fw-semibold text-secondary small">${p.part_code}</td>
+            <td class="small text-muted">${p.brand || 'Generic'}</td>
+            <td class="small">${UI.formatCurrency(p.purchase_price)}</td>
+            <td class="fw-semibold text-dark">${UI.formatCurrency(p.selling_price)}</td>
+            <td>
+              <span class="fs-6 fw-bold ${p.is_low_stock ? 'text-danger' : 'text-dark'}">${p.stock_quantity}</span>
+            </td>
+            <td class="text-muted small">${p.minimum_stock}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" onclick="openAdjustModal(${p.id}, '${p.part_name.replace(/'/g, "\\'")}', ${p.stock_quantity})" title="Stock IN/OUT">
+                  <i class="bi bi-arrow-left-right me-1"></i>Stock
+                </button>
+                <button class="btn btn-outline-secondary" onclick="viewPartTransactions(${p.id}, '${p.part_name.replace(/'/g, "\\'")}')" title="Audit History">
+                  <i class="bi bi-journal-text"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${err.message}</td></tr>`;
+      }
+    }
+
+    function toggleLowStockFilter() {
+      isLowStockOnly = !isLowStockOnly;
+      const btn = document.getElementById('lowStockToggleBtn');
+      if (isLowStockOnly) {
+        btn.classList.remove('btn-outline-danger');
+        btn.classList.add('btn-danger', 'text-white');
+      } else {
+        btn.classList.remove('btn-danger', 'text-white');
+        btn.classList.add('btn-outline-danger');
+      }
+      loadParts();
+    }
+
+    function resetPartFilter() {
+      document.getElementById('partSearch').value = '';
+      if (isLowStockOnly) toggleLowStockFilter();
+      else loadParts();
+    }
+
+    function openAdjustModal(id, name, currentStock) {
+      document.getElementById('adjustModalTitle').textContent = `Update Stock: ${name}`;
+      document.getElementById('adjustPartId').value = id;
+      document.getElementById('adjustQty').value = 5;
+      document.getElementById('adjustRemarks').value = '';
+      document.getElementById('adjustAlert').innerHTML = `
+        <div class="alert alert-info py-2 small mb-3">
+          Current Stock on Hand: <strong>${currentStock} units</strong>
+        </div>
+      `;
+
+      const modal = new bootstrap.Modal(document.getElementById('adjustStockModal'));
+      modal.show();
+    }
+
+    const adjustForm = document.getElementById('adjustStockForm');
+    adjustForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('adjustPartId').value;
+      const transactionType = document.getElementById('adjustType').value;
+      const quantity = parseInt(document.getElementById('adjustQty').value);
+      const remarks = document.getElementById('adjustRemarks').value.trim();
+      const alertBox = document.getElementById('adjustAlert');
+
+      try {
+        await API.post(`/inventory/${id}/stock`, { transactionType, quantity, remarks });
+        UI.showToast('Stock adjusted successfully!', 'success');
+
+        const modalEl = document.getElementById('adjustStockModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        loadParts();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    const addPartForm = document.getElementById('addPartForm');
+    addPartForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('addPartAlert');
+      alertBox.innerHTML = '';
+
+      const payload = {
+        partName: document.getElementById('partName').value.trim(),
+        partCode: document.getElementById('partCode').value.trim().toUpperCase(),
+        brand: document.getElementById('partBrand').value.trim(),
+        purchasePrice: parseFloat(document.getElementById('purchasePrice').value),
+        sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
+        stockQuantity: parseInt(document.getElementById('stockQuantity').value),
+        minimumStock: parseInt(document.getElementById('minimumStock').value)
+      };
+
+      try {
+        await API.post('/inventory', payload);
+        UI.showToast('Spare part added to catalog!', 'success');
+
+        const modalEl = document.getElementById('addPartModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        addPartForm.reset();
+
+        loadParts();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    async function viewPartTransactions(partId, partName) {
+      document.getElementById('txModalTitle').textContent = `Transaction Audit: ${partName}`;
+      loadTxData(`/inventory/${partId}/transactions`);
+    }
+
+    async function viewAllTransactions() {
+      document.getElementById('txModalTitle').textContent = 'Global Stock Transaction History';
+      loadTxData('/inventory/transactions');
+    }
+
+    async function loadTxData(url) {
+      const tbody = document.getElementById('txTbody');
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Loading transactions...</td></tr>';
+      const modal = new bootstrap.Modal(document.getElementById('transactionsModal'));
+      modal.show();
+
+      try {
+        const res = await API.get(url);
+        const txs = res.data || [];
+
+        if (txs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No transactions recorded yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = txs.map(t => {
+          const typeBadge = t.transaction_type === 'IN' ? 'bg-success' :
+                            t.transaction_type === 'OUT' ? 'bg-danger' : 'bg-warning text-dark';
+          return `
+            <tr>
+              <td class="fw-semibold small">${t.part_name} <span class="font-monospace text-muted">(${t.part_code})</span></td>
+              <td><span class="badge ${typeBadge}">${t.transaction_type}</span></td>
+              <td class="fw-bold fs-6">${t.quantity}</td>
+              <td class="text-muted small">${t.remarks || '—'}</td>
+              <td class="text-muted small">${UI.formatDateTime(t.created_at)}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${err.message}</td></tr>`;
+      }
+    }
+
+    let searchTimeout = null;
+    document.getElementById('partSearch').addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(loadParts, 400);
+    });
+
+    document.addEventListener('DOMContentLoaded', loadParts);
+  </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Reviews & Feedback | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand text-primary" href="/customer/index.html">
+        <span class="brand-icon"><i class="bi bi-phone"></i></span>
+        MSMS Customer Portal
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/customer/feedback.html"><i class="bi bi-star me-1"></i>Reviews</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+          <div class="mb-4">
+            <h3 class="fw-bold text-dark mb-1">Leave Repair Feedback</h3>
+            <p class="text-muted small">Share your service experience and rate our technician's workmanship.</p>
+          </div>
+
+          <div class="card border-0 shadow-sm p-4 bg-white">
+            <div class="card-body">
+              <div id="alertBox"></div>
+
+              <form id="feedbackForm">
+                
+                <div class="mb-3">
+                  <label for="repairSelect" class="form-label fw-semibold small">Select Completed Repair <span class="text-danger">*</span></label>
+                  <select class="form-select" id="repairSelect" required>
+                    <option value="">-- Choose completed repair --</option>
+                  </select>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label fw-semibold small d-block">Overall Rating <span class="text-danger">*</span></label>
+                  <div class="d-flex gap-2 fs-3 text-warning" id="starRating">
+                    <i class="bi bi-star-fill star-btn" data-value="1" style="cursor:pointer;"></i>
+                    <i class="bi bi-star-fill star-btn" data-value="2" style="cursor:pointer;"></i>
+                    <i class="bi bi-star-fill star-btn" data-value="3" style="cursor:pointer;"></i>
+                    <i class="bi bi-star-fill star-btn" data-value="4" style="cursor:pointer;"></i>
+                    <i class="bi bi-star-fill star-btn" data-value="5" style="cursor:pointer;"></i>
+                  </div>
+                  <input type="hidden" id="ratingInput" value="5">
+                  <div class="small text-muted mt-1" id="ratingLabel">5 Stars - Excellent Service</div>
+                </div>
+
+                <div class="mb-4">
+                  <label for="comments" class="form-label fw-semibold small">Comments / Experience Details</label>
+                  <textarea class="form-control" id="comments" rows="4" placeholder="How fast was the turnaround? Was the repair quality satisfactory?"></textarea>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                  <span id="btnText">Submit Feedback</span>
+                  <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+                </button>
+              </form>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['customer']);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedRepairId = urlParams.get('repairId');
+
+    async function loadRepairsForFeedback() {
+      try {
+        const res = await API.get('/bookings');
+        const bookings = res.data?.bookings || [];
+        const eligible = bookings.filter(b => b.repair_id);
+
+        const select = document.getElementById('repairSelect');
+        if (eligible.length === 0) {
+          select.innerHTML = '<option value="">No completed repairs found to review.</option>';
+        } else {
+          select.innerHTML = '<option value="">-- Choose repair to review --</option>' +
+            eligible.map(b => `
+              <option value="${b.repair_id}" ${preselectedRepairId == b.repair_id ? 'selected' : ''}>
+                ${b.booking_number} - ${b.brand} ${b.model} (${b.repair_status || 'In Progress'})
+              </option>
+            `).join('');
+        }
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    // Star rating picker logic
+    const stars = document.querySelectorAll('.star-btn');
+    const ratingInput = document.getElementById('ratingInput');
+    const ratingLabel = document.getElementById('ratingLabel');
+    const labels = {
+      1: '1 Star - Poor',
+      2: '2 Stars - Fair',
+      3: '3 Stars - Good',
+      4: '4 Stars - Very Good',
+      5: '5 Stars - Excellent Service'
+    };
+
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        const val = parseInt(star.getAttribute('data-value'));
+        ratingInput.value = val;
+        ratingLabel.textContent = labels[val];
+        updateStars(val);
+      });
+    });
+
+    function updateStars(val) {
+      stars.forEach(star => {
+        const starVal = parseInt(star.getAttribute('data-value'));
+        if (starVal <= val) {
+          star.classList.remove('bi-star');
+          star.classList.add('bi-star-fill');
+        } else {
+          star.classList.remove('bi-star-fill');
+          star.classList.add('bi-star');
+        }
+      });
+    }
+
+    const form = document.getElementById('feedbackForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('alertBox');
+      alertBox.innerHTML = '';
+
+      const repairId = document.getElementById('repairSelect').value;
+      if (!repairId) {
+        alertBox.innerHTML = '<div class="alert alert-warning py-2 small">Please select a repair record to review.</div>';
+        return;
+      }
+
+      const rating = document.getElementById('ratingInput').value;
+      const comments = document.getElementById('comments').value.trim();
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+
+      try {
+        await API.post('/feedback', { repairId: parseInt(repairId), rating: parseInt(rating), comments });
+        UI.showToast('Thank you! Your feedback has been recorded.', 'success');
+        setTimeout(() => {
+          window.location.href = '/customer/index.html';
+        }, 1000);
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small">${err.message || 'Failed to submit review'}</div>`;
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadRepairsForFeedback);
+  </script>
+</body>
+</html>

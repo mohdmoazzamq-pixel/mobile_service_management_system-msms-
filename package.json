@@ -1,0 +1,27 @@
+{
+  "name": "mobile-service-management-system",
+  "version": "1.0.0",
+  "description": "Mobile Service Management System (MSMS) - Full Web Application and REST API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "node backend/tests/verifyRoutingAndAuth.js",
+    "backend": "cd backend && npm start",
+    "db:setup": "cd backend && npm run db:setup",
+    "seed:admin": "cd backend && npm run seed:admin",
+    "seed:data": "cd backend && npm run seed:data",
+    "test": "cd backend && npm test",
+    "test:all": "cd backend && npm run test:all",
+    "test:routing": "cd backend && node tests/verifyRoutingAndAuth.js"
+  },
+  "keywords": [
+    "mobile-service",
+    "repair-management",
+    "express",
+    "postgresql",
+    "bootstrap5"
+  ],
+  "author": "",
+  "license": "ISC"
+}

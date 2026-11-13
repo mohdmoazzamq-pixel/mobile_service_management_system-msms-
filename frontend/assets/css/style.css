@@ -1,0 +1,203 @@
+/* ==========================================================================
+   MOBILE SERVICE MANAGEMENT SYSTEM (MSMS) - CORE STYLES
+   ========================================================================== */
+
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary-color: #64748b;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #06b6d4;
+  --dark-bg: #0f172a;
+  --sidebar-bg: #1e293b;
+  --body-bg: #f8fafc;
+  --card-border: #e2e8f0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background-color: var(--body-bg);
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* Navbar & Brand */
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-icon {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* Cards & Containers */
+.card {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+/* Status Badges */
+.badge-status {
+  padding: 0.4em 0.75em;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 6px;
+}
+
+.status-pending { background-color: #fef3c7; color: #92400e; }
+.status-approved { background-color: #d1fae5; color: #065f46; }
+.status-rejected { background-color: #fee2e2; color: #991b1b; }
+.status-cancelled { background-color: #f1f5f9; color: #475569; }
+
+.status-device_received { background-color: #e0f2fe; color: #0369a1; }
+.status-under_diagnosis { background-color: #ede9fe; color: #6d28d9; }
+.status-repair_in_progress { background-color: #fef3c7; color: #b45309; }
+.status-waiting_for_spare_parts { background-color: #ffedd5; color: #c2410c; }
+.status-repair_completed { background-color: #d1fae5; color: #047857; }
+.status-delivered { background-color: #dcfce7; color: #15803d; }
+
+.status-paid { background-color: #dcfce7; color: #166534; }
+.status-unpaid { background-color: #fee2e2; color: #991b1b; }
+.status-partial { background-color: #fef9c3; color: #854d0e; }
+
+/* Timeline Stepper for Repair Tracking */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+  list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 24px;
+  width: 3px;
+  background: #e2e8f0;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+  padding-left: 60px;
+}
+
+.timeline-badge {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 28px;
+  font-size: 13px;
+  color: #fff;
+  background-color: #94a3b8;
+  z-index: 2;
+  box-shadow: 0 0 0 4px #fff;
+}
+
+.timeline-item.completed .timeline-badge {
+  background-color: var(--success-color);
+}
+
+.timeline-item.active .timeline-badge {
+  background-color: var(--primary-color);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5), 0 0 0 4px #fff; }
+  70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0), 0 0 0 4px #fff; }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0), 0 0 0 4px #fff; }
+}
+
+.timeline-content {
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+
+/* Toast notifications container */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1080;
+}
+
+/* Loading spinner overlay */
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1090;
+  backdrop-filter: blur(2px);
+}
+
+/* Printable invoice styling */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print, header, nav, footer, .btn, #toast-container {
+    display: none !important;
+  }
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .print-invoice-sheet {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book a Repair | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand text-primary" href="/customer/index.html">
+        <span class="brand-icon"><i class="bi bi-phone"></i></span>
+        MSMS Customer Portal
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/feedback.html"><i class="bi bi-star me-1"></i>Reviews</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+          <div class="mb-4">
+            <h3 class="fw-bold text-dark mb-1">Submit a Repair Request</h3>
+            <p class="text-muted small">Choose your device, describe the defect, and receive a repair booking reference.</p>
+          </div>
+
+          <div class="card border-0 shadow-sm p-4 bg-white">
+            <div class="card-body">
+              <div id="alertBox"></div>
+
+              <form id="bookForm" enctype="multipart/form-data">
+                
+                <!-- Device Selection -->
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="deviceId" class="form-label fw-semibold small mb-0">Select Device <span class="text-danger">*</span></label>
+                    <a href="/customer/devices.html" class="small text-primary text-decoration-none">
+                      <i class="bi bi-plus-circle me-1"></i>Register new device
+                    </a>
+                  </div>
+                  <select class="form-select" id="deviceId" required>
+                    <option value="">-- Choose registered device --</option>
+                  </select>
+                </div>
+
+                <!-- Service Catalog Selection -->
+                <div class="mb-3">
+                  <label for="serviceId" class="form-label fw-semibold small">Requested Service (Optional)</label>
+                  <select class="form-select" id="serviceId">
+                    <option value="">-- Select specific repair service or leave for diagnosis --</option>
+                  </select>
+                  <div class="form-text small">Our certified technicians will verify and quote accurate parts pricing.</div>
+                </div>
+
+                <!-- Problem Category -->
+                <div class="mb-3">
+                  <label for="problemCategory" class="form-label fw-semibold small">Defect Category <span class="text-danger">*</span></label>
+                  <select class="form-select" id="problemCategory" required>
+                    <option value="">-- Select issue type --</option>
+                    <option value="Broken Display / Touchscreen">Broken Display / Touchscreen</option>
+                    <option value="Battery Drain / Swollen Battery">Battery Drain / Swollen Battery</option>
+                    <option value="Charging Problem / Damaged Port">Charging Problem / Damaged Port</option>
+                    <option value="Liquid / Water Damage">Liquid / Water Damage</option>
+                    <option value="Camera Lens / Sensor Failure">Camera Lens / Sensor Failure</option>
+                    <option value="Speaker / Microphone / Audio">Speaker / Microphone / Audio</option>
+                    <option value="Operating System / Boot Loop / Software">Operating System / Boot Loop / Software</option>
+                    <option value="Other Hardware Defect">Other Hardware Defect</option>
+                  </select>
+                </div>
+
+                <!-- Problem Description -->
+                <div class="mb-3">
+                  <label for="problemDescription" class="form-label fw-semibold small">Detailed Description <span class="text-danger">*</span></label>
+                  <textarea class="form-control" id="problemDescription" rows="4" required minlength="5" placeholder="Describe when the defect occurred, symptoms, whether the phone powers on..."></textarea>
+                  <div class="form-text small">Minimum 5 characters. Clear descriptions expedite initial diagnosis.</div>
+                </div>
+
+                <!-- Preferred Drop-off / Service Date -->
+                <div class="mb-3">
+                  <label for="preferredDate" class="form-label fw-semibold small">Preferred Service Date</label>
+                  <input type="date" class="form-control" id="preferredDate">
+                </div>
+
+                <!-- Image Attachments -->
+                <div class="mb-4">
+                  <label for="images" class="form-label fw-semibold small">Attach Defect Photos (Optional, max 5)</label>
+                  <input type="file" class="form-control" id="images" multiple accept="image/png, image/jpeg, image/webp">
+                  <div class="form-text small">Supported formats: JPEG, PNG, WebP. Max 5MB per image.</div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                  <span id="btnText"><i class="bi bi-send-check me-2"></i>Submit Repair Booking</span>
+                  <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+                </button>
+
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['customer']);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedDeviceId = urlParams.get('deviceId');
+
+    async function loadFormDropdowns() {
+      try {
+        const [devRes, servRes] = await Promise.all([
+          API.get('/devices'),
+          API.get('/services')
+        ]);
+
+        const deviceSelect = document.getElementById('deviceId');
+        const devices = devRes.data || [];
+
+        if (devices.length === 0) {
+          deviceSelect.innerHTML = '<option value="">No devices registered. Please register a device first!</option>';
+          UI.showToast('Please register a device before booking a repair.', 'warning');
+        } else {
+          deviceSelect.innerHTML = '<option value="">-- Choose registered device --</option>' +
+            devices.map(d => `
+              <option value="${d.id}" ${preselectedDeviceId == d.id ? 'selected' : ''}>
+                ${d.brand} ${d.model} ${d.imei ? `(IMEI: ${d.imei})` : ''}
+              </option>
+            `).join('');
+        }
+
+        const serviceSelect = document.getElementById('serviceId');
+        const services = servRes.data || [];
+        serviceSelect.innerHTML = '<option value="">-- Select specific repair service or leave for diagnosis --</option>' +
+          services.map(s => `
+            <option value="${s.id}">
+              ${s.service_name} (Base Price: ${UI.formatCurrency(s.base_price)})
+            </option>
+          `).join('');
+
+        // Set default minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('preferredDate').min = today;
+        document.getElementById('preferredDate').value = today;
+
+      } catch (err) {
+        UI.showToast(err.message || 'Failed to load form options', 'error');
+      }
+    }
+
+    const form = document.getElementById('bookForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const alertBox = document.getElementById('alertBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.innerHTML = '';
+      submitBtn.disabled = true;
+      btnSpinner.classList.remove('d-none');
+      btnText.textContent = 'Submitting Booking...';
+
+      const formData = new FormData();
+      formData.append('deviceId', document.getElementById('deviceId').value);
+      const serviceVal = document.getElementById('serviceId').value;
+      if (serviceVal) formData.append('serviceId', serviceVal);
+      formData.append('problemCategory', document.getElementById('problemCategory').value);
+      formData.append('problemDescription', document.getElementById('problemDescription').value.trim());
+      const prefDate = document.getElementById('preferredDate').value;
+      if (prefDate) formData.append('preferredDate', prefDate);
+
+      const files = document.getElementById('images').files;
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+
+      try {
+        const res = await API.post('/bookings', formData);
+        UI.showToast('Repair booking created successfully!', 'success');
+
+        const bookingNumber = res.data.booking_number;
+        setTimeout(() => {
+          window.location.href = `/customer/tracking.html?code=${encodeURIComponent(bookingNumber)}`;
+        }, 1000);
+      } catch (err) {
+        alertBox.innerHTML = `
+          <div class="alert alert-danger py-2 small">
+            ${err.message || 'Failed to submit repair request'}
+          </div>
+        `;
+        submitBtn.disabled = false;
+        btnSpinner.classList.add('d-none');
+        btnText.innerHTML = '<i class="bi bi-send-check me-2"></i>Submit Repair Booking';
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadFormDropdowns);
+  </script>
+</body>
+</html>

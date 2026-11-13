@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Repair Tracking | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand text-primary" href="/customer/index.html">
+        <span class="brand-icon"><i class="bi bi-phone"></i></span>
+        MSMS Customer Portal
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link" href="/customer/index.html"><i class="bi bi-speedometer2 me-1"></i>Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/devices.html"><i class="bi bi-phone me-1"></i>My Devices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/book.html"><i class="bi bi-plus-circle me-1"></i>Book Repair</a></li>
+          <li class="nav-item"><a class="nav-link active" href="/customer/tracking.html"><i class="bi bi-stopwatch me-1"></i>Tracking</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link" href="/customer/feedback.html"><i class="bi bi-star me-1"></i>Reviews</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <!-- Header & Search -->
+      <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+        <div class="row align-items-center g-3">
+          <div class="col-md-6">
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-search text-primary me-2"></i>Track Repair Job</h4>
+            <p class="text-muted small mb-0">Select from your bookings or search by booking reference number.</p>
+          </div>
+          <div class="col-md-6">
+            <div class="input-group">
+              <input type="text" id="bookingQueryInput" class="form-control" placeholder="BK-20261112-XXXX">
+              <button class="btn btn-primary px-3 fw-semibold" type="button" onclick="searchBooking()">
+                <i class="bi bi-search me-1"></i>Track
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Select Dropdown -->
+      <div class="mb-3 d-flex align-items-center gap-2" id="quickSelectRow">
+        <span class="small text-muted fw-semibold">Your Bookings:</span>
+        <select class="form-select form-select-sm w-auto" id="userBookingsDropdown" onchange="onBookingSelected(this.value)">
+          <option value="">-- Choose one of your bookings --</option>
+        </select>
+      </div>
+
+      <div id="trackingResultArea">
+        <div class="card p-5 text-center border-0 shadow-sm text-muted">
+          <i class="bi bi-search fs-1 text-secondary mb-2"></i>
+          <h5>Select or enter a booking number to view real-time status.</h5>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['customer']);
+
+    let myBookings = [];
+
+    async function initTracking() {
+      try {
+        const res = await API.get('/bookings');
+        myBookings = res.data?.bookings || [];
+
+        const dropdown = document.getElementById('userBookingsDropdown');
+        if (myBookings.length > 0) {
+          dropdown.innerHTML = '<option value="">-- Choose one of your bookings --</option>' +
+            myBookings.map(b => `
+              <option value="${b.booking_number}">
+                ${b.booking_number} - ${b.brand} ${b.model} (${b.repair_status || b.booking_status})
+              </option>
+            `).join('');
+        } else {
+          document.getElementById('quickSelectRow').classList.add('d-none');
+        }
+
+        // Check if query param exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+          document.getElementById('bookingQueryInput').value = code;
+          loadBookingByNumber(code);
+        } else if (myBookings.length > 0) {
+          loadBookingByNumber(myBookings[0].booking_number);
+          dropdown.value = myBookings[0].booking_number;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function onBookingSelected(code) {
+      if (!code) return;
+      document.getElementById('bookingQueryInput').value = code;
+      loadBookingByNumber(code);
+    }
+
+    function searchBooking() {
+      const code = document.getElementById('bookingQueryInput').value.trim();
+      if (!code) {
+        UI.showToast('Please enter a booking reference number', 'warning');
+        return;
+      }
+      loadBookingByNumber(code);
+    }
+
+    async function loadBookingByNumber(code) {
+      const area = document.getElementById('trackingResultArea');
+      area.innerHTML = `
+        <div class="card p-5 text-center border-0 shadow-sm text-muted">
+          <div class="spinner-border text-primary mx-auto mb-3"></div>
+          <div>Loading repair progress for ${code}...</div>
+        </div>
+      `;
+
+      try {
+        // Find booking ID from myBookings or search bookings
+        const searchRes = await API.get(`/bookings?search=${encodeURIComponent(code)}`);
+        const list = searchRes.data?.bookings || [];
+        const match = list.find(b => b.booking_number.toUpperCase() === code.toUpperCase());
+
+        if (!match) {
+          area.innerHTML = `
+            <div class="card p-4 text-center border-0 shadow-sm text-danger">
+              <i class="bi bi-exclamation-circle fs-2 mb-2"></i>
+              <h5>Booking "${code}" not found.</h5>
+              <p class="text-muted small">Please verify the booking number or check your registered bookings list.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Fetch complete booking and repair details
+        const bookingDetail = await API.get(`/bookings/${match.id}`);
+        const b = bookingDetail.data;
+
+        let repairData = null;
+        if (b.repair_id) {
+          const repRes = await API.get(`/repairs/${b.repair_id}`);
+          repairData = repRes.data;
+        }
+
+        renderTrackingView(b, repairData);
+      } catch (err) {
+        area.innerHTML = `
+          <div class="alert alert-danger p-4">
+            <h5>Failed to load tracking data</h5>
+            <p class="mb-0">${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderTrackingView(b, repair) {
+      const area = document.getElementById('trackingResultArea');
+
+      const isPending = b.booking_status === 'PENDING';
+      const isRejected = b.booking_status === 'REJECTED';
+      const isCancelled = b.booking_status === 'CANCELLED';
+
+      const stages = [
+        { key: 'DEVICE_RECEIVED', label: 'Device Received', icon: 'bi-box-arrow-in-down' },
+        { key: 'UNDER_DIAGNOSIS', label: 'Under Diagnosis', icon: 'bi-search' },
+        { key: 'REPAIR_IN_PROGRESS', label: 'In Progress', icon: 'bi-wrench' },
+        { key: 'REPAIR_COMPLETED', label: 'Completed', icon: 'bi-check-circle' },
+        { key: 'DELIVERED', label: 'Delivered', icon: 'bi-truck' }
+      ];
+
+      const currentStatus = repair ? repair.repair_status : 'PENDING';
+      const statusOrder = ['DEVICE_RECEIVED', 'UNDER_DIAGNOSIS', 'REPAIR_IN_PROGRESS', 'WAITING_FOR_SPARE_PARTS', 'REPAIR_COMPLETED', 'DELIVERED'];
+      const currentIndex = statusOrder.indexOf(currentStatus);
+
+      let stepperHtml = '';
+      if (!isPending && !isRejected && !isCancelled && repair) {
+        stepperHtml = `
+          <div class="card p-4 border-0 shadow-sm bg-white mb-4">
+            <h6 class="fw-bold text-dark text-uppercase small mb-4" style="letter-spacing: 0.5px;">Repair Progress Stepper</h6>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              ${stages.map((st, idx) => {
+                const stageIndex = statusOrder.indexOf(st.key);
+                const isPassed = currentIndex >= stageIndex;
+                const isCurrent = currentStatus === st.key;
+                const badgeColor = isPassed ? (isCurrent ? 'bg-primary text-white shadow' : 'bg-success text-white') : 'bg-light text-muted border';
+
+                return `
+                  <div class="d-flex align-items-center flex-column text-center" style="min-width: 100px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2 ${badgeColor}" style="width: 44px; height: 44px;">
+                      <i class="bi ${st.icon} fs-5"></i>
+                    </div>
+                    <span class="small fw-bold ${isCurrent ? 'text-primary' : (isPassed ? 'text-success' : 'text-muted')}">${st.label}</span>
+                  </div>
+                `;
+              }).join('<div class="flex-grow-1 border-top d-none d-md-block my-3"></div>')}
+            </div>
+            ${currentStatus === 'WAITING_FOR_SPARE_PARTS' ? `
+              <div class="alert alert-warning py-2 mt-3 mb-0 small">
+                <i class="bi bi-clock-history me-1"></i>
+                <strong>Notice:</strong> Repair is temporarily paused pending arrival/allocation of specialized replacement components.
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      area.innerHTML = `
+        <div class="row g-4">
+          <!-- Main Details -->
+          <div class="col-lg-8">
+            ${stepperHtml}
+
+            <!-- Booking Info Card -->
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+              <div class="d-flex justify-content-between align-items-start mb-3 border-bottom pb-3">
+                <div>
+                  <span class="text-muted small text-uppercase fw-bold">Booking Number</span>
+                  <h4 class="fw-bold text-primary mb-0 font-monospace">${b.booking_number}</h4>
+                </div>
+                <div>
+                  ${repair ? UI.getStatusBadge(repair.repair_status) : UI.getStatusBadge(b.booking_status)}
+                </div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <div class="text-muted small">Device:</div>
+                  <div class="fw-bold text-dark">${b.brand} ${b.model}</div>
+                  <div class="text-secondary small">IMEI: ${b.imei || 'Not registered'}</div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="text-muted small">Assigned Service:</div>
+                  <div class="fw-bold text-dark">${b.service_name || 'General Hardware Inspection'}</div>
+                  <div class="text-secondary small">Base Fee: ${UI.formatCurrency(b.service_base_price || 0)}</div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="text-muted small">Defect Category:</div>
+                  <div class="fw-medium text-dark">${b.problem_category}</div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="text-muted small">Assigned Technician:</div>
+                  <div class="fw-semibold text-dark">${b.technician_name ? `${b.technician_name}` : '<span class="text-muted">Awaiting technician assignment</span>'}</div>
+                </div>
+                <div class="col-12">
+                  <div class="text-muted small">Reported Symptoms:</div>
+                  <div class="p-3 bg-light rounded text-dark small mt-1">${b.problem_description}</div>
+                </div>
+              </div>
+
+              <!-- Uploaded images if any -->
+              ${b.images && b.images.length > 0 ? `
+                <div class="mt-4 pt-3 border-top">
+                  <div class="fw-bold small text-muted mb-2">Attached Problem Photos:</div>
+                  <div class="d-flex flex-wrap gap-2">
+                    ${b.images.map(img => {
+                      const imgUrl = (img.image_path || '').startsWith('/') ? img.image_path : '/' + (img.image_path || '');
+                      return `
+                        <a href="${imgUrl}" target="_blank">
+                          <img src="${imgUrl}" class="rounded border" style="width: 80px; height: 80px; object-fit: cover;">
+                        </a>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Audit Trail Timeline -->
+            ${repair && repair.history && repair.history.length > 0 ? `
+              <div class="card border-0 shadow-sm p-4 bg-white">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history text-primary me-2"></i>Repair Audit History</h5>
+                <ul class="timeline">
+                  ${repair.history.map((h, i) => `
+                    <li class="timeline-item ${i === repair.history.length - 1 ? 'active' : 'completed'}">
+                      <div class="timeline-badge"><i class="bi bi-check"></i></div>
+                      <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <span class="fw-bold text-dark small">${UI.getStatusBadge(h.new_status)}</span>
+                          <span class="text-muted small" style="font-size:0.75rem;">${UI.formatDateTime(h.created_at)}</span>
+                        </div>
+                        <div class="text-secondary small">${h.remarks || 'Status updated'}</div>
+                        <div class="text-muted" style="font-size:0.7rem;">Updated by: ${h.updated_by_name} (${h.updated_by_role})</div>
+                      </div>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- Sidebar / Quick Actions -->
+          <div class="col-lg-4">
+            
+            <!-- Diagnosis Notes Card -->
+            ${repair ? `
+              <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-clipboard2-pulse text-info me-2"></i>Technician Diagnosis</h6>
+                <div class="p-3 bg-light rounded text-dark small mb-3">
+                  ${repair.diagnosis || 'Initial inspection in progress. Formal diagnosis will be documented shortly.'}
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom small">
+                  <span class="text-muted">Est. Completion:</span>
+                  <span class="fw-semibold text-dark">${UI.formatDate(repair.estimated_completion)}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom small">
+                  <span class="text-muted">Estimated Cost:</span>
+                  <span class="fw-semibold text-dark">${UI.formatCurrency(repair.estimated_cost)}</span>
+                </div>
+                ${repair.actual_completion ? `
+                  <div class="d-flex justify-content-between py-1 border-bottom small">
+                    <span class="text-muted">Completed On:</span>
+                    <span class="fw-semibold text-success">${UI.formatDate(repair.actual_completion)}</span>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Parts Installed Card -->
+            ${repair && repair.parts && repair.parts.length > 0 ? `
+              <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-cpu text-warning me-2"></i>Parts Fitted</h6>
+                <div class="d-flex flex-column gap-2 small">
+                  ${repair.parts.map(p => `
+                    <div class="d-flex justify-content-between border-bottom pb-2">
+                      <div>
+                        <div class="fw-semibold text-dark">${p.part_name}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Qty: ${p.quantity} × ${UI.formatCurrency(p.unit_price)}</div>
+                      </div>
+                      <div class="fw-bold text-dark">${UI.formatCurrency(p.quantity * p.unit_price)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Invoice Shortcut Card -->
+            ${repair && repair.invoice_id ? `
+              <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-receipt text-success me-2"></i>Invoice Ready</h6>
+                <p class="text-muted small mb-3">An itemized invoice has been generated for this repair.</p>
+                <div class="d-flex justify-content-between mb-3 small">
+                  <span class="text-muted">Total Amount:</span>
+                  <span class="fw-bold text-dark fs-6">${UI.formatCurrency(repair.invoice_total)}</span>
+                </div>
+                <a href="/customer/invoices.html?id=${repair.invoice_id}" class="btn btn-outline-success btn-sm w-100 fw-semibold">
+                  View & Print Invoice
+                </a>
+              </div>
+            ` : ''}
+
+            <!-- Feedback Card -->
+            ${repair && ['REPAIR_COMPLETED', 'DELIVERED'].includes(repair.repair_status) ? `
+              <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-star text-warning me-2"></i>Feedback</h6>
+                ${repair.feedback ? `
+                  <div class="text-warning mb-1">
+                    ${'★'.repeat(repair.feedback.rating)}${'☆'.repeat(5 - repair.feedback.rating)}
+                  </div>
+                  <p class="text-muted small mb-0">${repair.feedback.comments || 'No written comment.'}</p>
+                ` : `
+                  <p class="text-muted small mb-3">How was your repair experience? Let us know!</p>
+                  <a href="/customer/feedback.html?repairId=${repair.id}" class="btn btn-outline-primary btn-sm w-100 fw-semibold">
+                    Submit Review
+                  </a>
+                `}
+              </div>
+            ` : ''}
+
+          </div>
+        </div>
+      `;
+    }
+
+    document.addEventListener('DOMContentLoaded', initTracking);
+  </script>
+</body>
+</html>

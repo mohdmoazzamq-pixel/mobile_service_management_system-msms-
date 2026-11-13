@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Registry | Admin Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/admin/index.html">
+        <span class="brand-icon bg-primary text-white"><i class="bi bi-shield-lock"></i></span>
+        MSMS Control Center
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/index.html"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/bookings.html"><i class="bi bi-inbox me-1"></i>Bookings</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/technicians.html"><i class="bi bi-people me-1"></i>Technicians</a></li>
+          <li class="nav-item"><a class="nav-link active text-white" href="/admin/customers.html"><i class="bi bi-person-lines-fill me-1"></i>Customers</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/services.html"><i class="bi bi-list-check me-1"></i>Services</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/inventory.html"><i class="bi bi-box-seam me-1"></i>Inventory</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/reports.html"><i class="bi bi-graph-up me-1"></i>Reports</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Customer Accounts</h3>
+          <p class="text-muted small mb-0">Customer directory, contact information, device ownership, and history.</p>
+        </div>
+        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+          <i class="bi bi-person-plus me-1"></i>Register Customer
+        </button>
+      </div>
+
+      <!-- Search Card -->
+      <div class="card border-0 shadow-sm p-3 bg-white mb-4">
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+          <input type="text" id="custSearch" class="form-control" placeholder="Search customer by name, email, phone, city...">
+        </div>
+      </div>
+
+      <!-- Customers Table -->
+      <div class="card border-0 shadow-sm bg-white">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+              <tr>
+                <th>Customer Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>City / Address</th>
+                <th>Devices</th>
+                <th>Bookings</th>
+                <th>Member Since</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customersTbody">
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted">Loading customer records...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Customer Detail Modal -->
+  <div class="modal fade" id="customerDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="detailCustomerName">Customer Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="customerDetailContent">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Customer Modal -->
+  <div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Manual Customer Registration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addCustomerForm">
+          <div class="modal-body">
+            <div id="addCustAlert"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="newCustName" required placeholder="Emily Watson">
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Email Address <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="newCustEmail" required placeholder="emily@example.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold small">Phone Number</label>
+                <input type="tel" class="form-control" id="newCustPhone" placeholder="9876543210">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Initial Password</label>
+              <input type="password" class="form-control" id="newCustPassword" value="Customer123!">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Street Address</label>
+              <input type="text" class="form-control" id="newCustAddress" placeholder="456 Skyline Boulevard">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">City</label>
+              <input type="text" class="form-control" id="newCustCity" placeholder="North Haven">
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary fw-semibold">Register Customer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['admin']);
+
+    async function loadCustomers() {
+      const search = document.getElementById('custSearch').value.trim();
+      const tbody = document.getElementById('customersTbody');
+      let url = '/customers?limit=50';
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+
+      try {
+        const res = await API.get(url);
+        const customers = res.data?.customers || [];
+
+        if (customers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted">No customers found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = customers.map(c => `
+          <tr>
+            <td class="fw-semibold text-dark">${c.name}</td>
+            <td class="text-muted small">${c.email}</td>
+            <td class="text-muted small">${c.phone || 'N/A'}</td>
+            <td class="text-muted small">${c.city || c.address || '—'}</td>
+            <td><span class="badge bg-light text-dark border">${c.device_count || 0}</span></td>
+            <td><span class="badge bg-light text-dark border">${c.booking_count || 0}</span></td>
+            <td class="text-muted small">${UI.formatDate(c.created_at)}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary" onclick="viewCustomer(${c.id})">
+                <i class="bi bi-eye me-1"></i>View
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">${err.message}</td></tr>`;
+      }
+    }
+
+    async function viewCustomer(id) {
+      try {
+        const res = await API.get(`/customers/${id}`);
+        const c = res.data;
+
+        document.getElementById('detailCustomerName').textContent = `${c.name} - Profile Details`;
+        const content = document.getElementById('customerDetailContent');
+
+        content.innerHTML = `
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <div class="text-muted small">Email:</div>
+              <div class="fw-semibold text-dark">${c.email}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="text-muted small">Phone:</div>
+              <div class="fw-semibold text-dark">${c.phone || 'N/A'}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="text-muted small">Address:</div>
+              <div class="text-dark">${c.address || 'Not specified'}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="text-muted small">City:</div>
+              <div class="text-dark">${c.city || 'Not specified'}</div>
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Registered Devices (${c.devices ? c.devices.length : 0})</h6>
+          ${c.devices && c.devices.length > 0 ? `
+            <div class="d-flex flex-wrap gap-2 mb-4">
+              ${c.devices.map(d => `
+                <div class="p-3 bg-light rounded border small flex-grow-1" style="min-width: 220px;">
+                  <div class="fw-bold text-dark">${d.brand} ${d.model}</div>
+                  <div class="text-muted font-monospace" style="font-size:0.75rem;">IMEI: ${d.imei || 'N/A'}</div>
+                  <div class="text-muted font-monospace" style="font-size:0.75rem;">Serial: ${d.serial_number || 'N/A'}</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : '<p class="text-muted small mb-4">No devices registered by this customer.</p>'}
+
+          <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Repair Bookings (${c.bookings ? c.bookings.length : 0})</h6>
+          ${c.bookings && c.bookings.length > 0 ? `
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle small mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Booking #</th>
+                    <th>Device</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${c.bookings.map(b => `
+                    <tr>
+                      <td class="fw-bold font-monospace">${b.booking_number}</td>
+                      <td>${b.brand} ${b.model}</td>
+                      <td>${b.problem_category}</td>
+                      <td>${UI.getStatusBadge(b.booking_status)}</td>
+                      <td class="text-muted">${UI.formatDate(b.created_at)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<p class="text-muted small">No bookings submitted yet.</p>'}
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('customerDetailModal'));
+        modal.show();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    const form = document.getElementById('addCustomerForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('addCustAlert');
+      alertBox.innerHTML = '';
+
+      const payload = {
+        name: document.getElementById('newCustName').value.trim(),
+        email: document.getElementById('newCustEmail').value.trim(),
+        phone: document.getElementById('newCustPhone').value.trim(),
+        password: document.getElementById('newCustPassword').value,
+        address: document.getElementById('newCustAddress').value.trim(),
+        city: document.getElementById('newCustCity').value.trim()
+      };
+
+      try {
+        await API.post('/customers', payload);
+        UI.showToast('Customer created successfully', 'success');
+
+        const modalEl = document.getElementById('addCustomerModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        form.reset();
+
+        loadCustomers();
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    let searchTimeout = null;
+    document.getElementById('custSearch').addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(loadCustomers, 400);
+    });
+
+    document.addEventListener('DOMContentLoaded', loadCustomers);
+  </script>
+</body>
+</html>

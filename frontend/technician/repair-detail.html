@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repair Workbench | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-secondary border-bottom sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/technician/index.html">
+        <span class="brand-icon bg-warning text-dark"><i class="bi bi-wrench"></i></span>
+        MSMS Technician Workbench
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#techNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="techNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/technician/index.html"><i class="bi bi-arrow-left me-1"></i>Back to Job Queue</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container" id="workbenchContainer">
+      <div class="card p-5 text-center border-0 shadow-sm text-muted">
+        <div class="spinner-border text-primary mx-auto mb-3"></div>
+        <div>Loading repair workbench data...</div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['technician', 'admin']);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const repairId = urlParams.get('id');
+
+    let currentRepair = null;
+    let sparePartsCatalog = [];
+
+    async function initWorkbench() {
+      if (!repairId) {
+        document.getElementById('workbenchContainer').innerHTML = `
+          <div class="alert alert-danger">No repair job ID specified in URL.</div>
+        `;
+        return;
+      }
+
+      try {
+        const [repRes, partsRes] = await Promise.all([
+          API.get(`/repairs/${repairId}`),
+          API.get('/inventory')
+        ]);
+
+        currentRepair = repRes.data;
+        sparePartsCatalog = partsRes.data || [];
+
+        renderWorkbench();
+      } catch (err) {
+        document.getElementById('workbenchContainer').innerHTML = `
+          <div class="alert alert-danger p-4">
+            <h5>Failed to load repair workbench</h5>
+            <p>${err.message}</p>
+            <a href="/technician/index.html" class="btn btn-secondary btn-sm">Return to Job Queue</a>
+          </div>
+        `;
+      }
+    }
+
+    function renderWorkbench() {
+      const r = currentRepair;
+      const c = document.getElementById('workbenchContainer');
+
+      c.innerHTML = `
+        <!-- Top Summary Bar -->
+        <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 border-bottom pb-3 mb-3">
+            <div>
+              <div class="text-muted small text-uppercase fw-bold">Repair Job #${r.id} | Booking: <span class="font-monospace text-primary">${r.booking_number}</span></div>
+              <h3 class="fw-bold text-dark mb-0">${r.brand} ${r.model}</h3>
+              <div class="text-muted small">IMEI: ${r.imei || 'Not registered'} | Serial: ${r.serial_number || 'N/A'}</div>
+            </div>
+            <div class="text-end">
+              <div class="mb-1">${UI.getStatusBadge(r.repair_status)}</div>
+              <div class="text-muted small">Intake Date: ${UI.formatDate(r.created_at)}</div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="text-muted small">Customer Name:</div>
+              <div class="fw-semibold text-dark">${r.customer_name}</div>
+              <div class="text-muted small">${r.customer_phone || ''}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Reported Category:</div>
+              <div class="fw-semibold text-dark">${r.problem_category}</div>
+              <div class="text-muted small">${r.service_name || 'General Inspection'}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Customer's Reported Issue:</div>
+              <div class="p-2 bg-light rounded text-dark small">${r.problem_description}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          
+          <!-- Left Column: Status Update & Diagnosis -->
+          <div class="col-lg-7">
+            
+            <!-- Update Status Card -->
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-arrow-repeat text-primary me-2"></i>Update Repair Status</h5>
+              <form id="statusUpdateForm">
+                <div id="statusAlert"></div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Select New Workflow State <span class="text-danger">*</span></label>
+                  <select class="form-select" id="newStatusSelect" required>
+                    <option value="DEVICE_RECEIVED" ${r.repair_status === 'DEVICE_RECEIVED' ? 'selected' : ''}>DEVICE_RECEIVED (Intake Confirmed)</option>
+                    <option value="UNDER_DIAGNOSIS" ${r.repair_status === 'UNDER_DIAGNOSIS' ? 'selected' : ''}>UNDER_DIAGNOSIS (Hardware Testing)</option>
+                    <option value="REPAIR_IN_PROGRESS" ${r.repair_status === 'REPAIR_IN_PROGRESS' ? 'selected' : ''}>REPAIR_IN_PROGRESS (Bench Work / Soldering)</option>
+                    <option value="WAITING_FOR_SPARE_PARTS" ${r.repair_status === 'WAITING_FOR_SPARE_PARTS' ? 'selected' : ''}>WAITING_FOR_SPARE_PARTS (Parts Pending)</option>
+                    <option value="REPAIR_COMPLETED" ${r.repair_status === 'REPAIR_COMPLETED' ? 'selected' : ''}>REPAIR_COMPLETED (QC Verified)</option>
+                    <option value="DELIVERED" ${r.repair_status === 'DELIVERED' ? 'selected' : ''}>DELIVERED (Handed to Customer)</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Status Remarks / Action Log</label>
+                  <input type="text" class="form-control" id="statusRemarks" placeholder="e.g. Display adhesive cured; touch digitizer passes multi-touch test.">
+                </div>
+
+                <button type="submit" id="saveStatusBtn" class="btn btn-primary fw-semibold">
+                  Update Repair Status
+                </button>
+              </form>
+            </div>
+
+            <!-- Diagnosis Notes Card -->
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clipboard2-pulse text-info me-2"></i>Diagnosis & Estimate Notes</h5>
+              <form id="diagnosisForm">
+                <div id="diagAlert"></div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Technical Findings / Diagnosis <span class="text-danger">*</span></label>
+                  <textarea class="form-control" id="diagnosisText" rows="4" required placeholder="Detail test results (e.g. current draw, cracked flex cable, voltage on power rail)...">${r.diagnosis || ''}</textarea>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold small">Estimated Cost ($)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="diagEstCost" value="${r.estimated_cost || 0}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold small">Estimated Completion</label>
+                    <input type="date" class="form-control" id="diagEstCompletion" value="${r.estimated_completion ? r.estimated_completion.split('T')[0] : ''}">
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-outline-info fw-semibold">
+                  Save Technical Diagnosis
+                </button>
+              </form>
+            </div>
+
+            <!-- Audit History Timeline -->
+            <div class="card border-0 shadow-sm p-4 bg-white">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Status Change Audit Log</h5>
+              <ul class="timeline">
+                ${r.history && r.history.length > 0 ? r.history.map((h, idx) => `
+                  <li class="timeline-item ${idx === r.history.length - 1 ? 'active' : 'completed'}">
+                    <div class="timeline-badge"><i class="bi bi-check"></i></div>
+                    <div class="timeline-content">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold small">${UI.getStatusBadge(h.new_status)}</span>
+                        <span class="text-muted small" style="font-size:0.75rem;">${UI.formatDateTime(h.created_at)}</span>
+                      </div>
+                      <div class="text-secondary small">${h.remarks || 'Status updated'}</div>
+                      <div class="text-muted" style="font-size:0.7rem;">Actor: ${h.updated_by_name} (${h.updated_by_role})</div>
+                    </div>
+                  </li>
+                `).join('') : '<li class="text-muted small">No status changes logged yet.</li>'}
+              </ul>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Spare Parts Issuance -->
+          <div class="col-lg-5">
+            
+            <!-- Issue Spare Part Card -->
+            <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cpu text-warning me-2"></i>Issue Replacement Part</h5>
+              <p class="small text-muted mb-3">Parts are atomically checked and deducted from warehouse inventory.</p>
+
+              <form id="usePartForm">
+                <div id="partAlert"></div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Select Spare Part <span class="text-danger">*</span></label>
+                  <select class="form-select" id="partSelect" required onchange="onPartPicked(this.value)">
+                    <option value="">-- Choose part from catalog --</option>
+                    ${sparePartsCatalog.map(p => `
+                      <option value="${p.id}" data-stock="${p.stock_quantity}" data-price="${p.selling_price}">
+                        ${p.part_name} (${p.part_code}) - Stock: ${p.stock_quantity}
+                      </option>
+                    `).join('')}
+                  </select>
+                </div>
+
+                <div id="partStockPreview" class="p-2 bg-light rounded small mb-3 d-none">
+                  <div class="d-flex justify-content-between">
+                    <span>Available In Stock:</span>
+                    <strong id="previewStockQty">-</strong>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span>Unit Selling Price:</span>
+                    <strong id="previewUnitPrice">-</strong>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Quantity to Issue <span class="text-danger">*</span></label>
+                  <input type="number" min="1" class="form-control" id="partQty" value="1" required>
+                </div>
+
+                <button type="submit" id="issuePartBtn" class="btn btn-warning text-dark w-100 fw-bold">
+                  <i class="bi bi-box-arrow-right me-1"></i>Deduct & Install Part
+                </button>
+              </form>
+            </div>
+
+            <!-- Installed Parts on this Repair -->
+            <div class="card border-0 shadow-sm p-4 bg-white">
+              <h5 class="fw-bold text-dark mb-3"><i class="bi bi-tools text-success me-2"></i>Installed Components (${r.parts ? r.parts.length : 0})</h5>
+              <div id="installedPartsList">
+                ${r.parts && r.parts.length > 0 ? `
+                  <div class="d-flex flex-column gap-2">
+                    ${r.parts.map(p => `
+                      <div class="p-2 border rounded bg-light small">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div class="fw-bold text-dark">${p.part_name}</div>
+                            <div class="text-muted font-monospace" style="font-size:0.7rem;">${p.part_code}</div>
+                          </div>
+                          <span class="badge bg-success-subtle text-success fs-6">${UI.formatCurrency(p.quantity * p.unit_price)}</span>
+                        </div>
+                        <div class="text-muted mt-1" style="font-size:0.75rem;">
+                          Qty: ${p.quantity} × ${UI.formatCurrency(p.unit_price)} | Installed by ${p.used_by_name}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : '<div class="text-muted small text-center py-3">No parts fitted yet on this repair.</div>'}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+      attachEventListeners();
+    }
+
+    function onPartPicked(partId) {
+      const preview = document.getElementById('partStockPreview');
+      if (!partId) {
+        preview.classList.add('d-none');
+        return;
+      }
+      const p = sparePartsCatalog.find(x => x.id == partId);
+      if (p) {
+        preview.classList.remove('d-none');
+        document.getElementById('previewStockQty').textContent = `${p.stock_quantity} units`;
+        document.getElementById('previewUnitPrice').textContent = UI.formatCurrency(p.selling_price);
+      }
+    }
+
+    function attachEventListeners() {
+      // Status update form
+      const statusForm = document.getElementById('statusUpdateForm');
+      statusForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const status = document.getElementById('newStatusSelect').value;
+        const remarks = document.getElementById('statusRemarks').value.trim();
+        const alertBox = document.getElementById('statusAlert');
+
+        try {
+          await API.patch(`/repairs/${repairId}/status`, { status, remarks });
+          UI.showToast(`Status updated to ${status}`, 'success');
+          initWorkbench();
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+        }
+      });
+
+      // Diagnosis form
+      const diagForm = document.getElementById('diagnosisForm');
+      diagForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const diagnosis = document.getElementById('diagnosisText').value.trim();
+        const estimatedCost = document.getElementById('diagEstCost').value;
+        const estimatedCompletion = document.getElementById('diagEstCompletion').value;
+        const alertBox = document.getElementById('diagAlert');
+
+        try {
+          await API.patch(`/repairs/${repairId}/diagnosis`, { diagnosis, estimatedCost, estimatedCompletion });
+          UI.showToast('Diagnosis details saved', 'success');
+          initWorkbench();
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+        }
+      });
+
+      // Use part form
+      const partForm = document.getElementById('usePartForm');
+      partForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const partId = document.getElementById('partSelect').value;
+        const quantity = document.getElementById('partQty').value;
+        const alertBox = document.getElementById('partAlert');
+
+        try {
+          await API.post(`/repairs/${repairId}/parts`, { partId: parseInt(partId), quantity: parseInt(quantity) });
+          UI.showToast('Spare part deducted and installed successfully!', 'success');
+          initWorkbench();
+        } catch (err) {
+          alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initWorkbench);
+  </script>
+</body>
+</html>

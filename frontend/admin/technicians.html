@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Technicians | Admin Control</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/admin/index.html">
+        <span class="brand-icon bg-primary text-white"><i class="bi bi-shield-lock"></i></span>
+        MSMS Control Center
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="adminNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/index.html"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/bookings.html"><i class="bi bi-inbox me-1"></i>Bookings</a></li>
+          <li class="nav-item"><a class="nav-link active text-white" href="/admin/technicians.html"><i class="bi bi-people me-1"></i>Technicians</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/customers.html"><i class="bi bi-person-lines-fill me-1"></i>Customers</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/services.html"><i class="bi bi-list-check me-1"></i>Services</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/inventory.html"><i class="bi bi-box-seam me-1"></i>Inventory</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/invoices.html"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="/admin/reports.html"><i class="bi bi-graph-up me-1"></i>Reports</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Service Technicians</h3>
+          <p class="text-muted small mb-0">Manage service staff, job allocation, specializations and live availability status.</p>
+        </div>
+        <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addTechModal">
+          <i class="bi bi-person-plus-fill me-1"></i>Add New Technician
+        </button>
+      </div>
+
+      <!-- Technicians Grid -->
+      <div class="row g-4" id="techGrid">
+        <div class="col-12 text-center py-5 text-muted">Loading technicians...</div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Add Technician Modal -->
+  <div class="modal fade" id="addTechModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Register Service Technician</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addTechForm">
+          <div class="modal-body">
+            <div id="modalAlert"></div>
+            
+            <div class="mb-3">
+              <label for="techName" class="form-label fw-semibold small">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="techName" required placeholder="Alex Rivera">
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label for="techEmail" class="form-label fw-semibold small">Email Address <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="techEmail" required placeholder="tech@msms.local">
+              </div>
+              <div class="col-md-6">
+                <label for="techPhone" class="form-label fw-semibold small">Phone Number</label>
+                <input type="tel" class="form-control" id="techPhone" placeholder="9876543211">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="techPassword" class="form-label fw-semibold small">Initial Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" id="techPassword" required minlength="6" value="Technician123!">
+            </div>
+
+            <div class="mb-3">
+              <label for="techSpec" class="form-label fw-semibold small">Hardware Specialization</label>
+              <input type="text" class="form-control" id="techSpec" placeholder="e.g. OLED Display & Glass, Micro-soldering, Water Recovery">
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label for="techExp" class="form-label fw-semibold small">Years Experience</label>
+                <input type="number" class="form-control" id="techExp" min="0" value="3">
+              </div>
+              <div class="col-md-6">
+                <label for="techAvail" class="form-label fw-semibold small">Initial Status</label>
+                <select class="form-select" id="techAvail">
+                  <option value="AVAILABLE" selected>AVAILABLE</option>
+                  <option value="BUSY">BUSY</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" id="saveTechBtn" class="btn btn-primary fw-semibold">Save Technician</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    Auth.requireAuth(['admin']);
+
+    async function loadTechnicians() {
+      const grid = document.getElementById('techGrid');
+      try {
+        const res = await API.get('/technicians');
+        const techs = res.data || [];
+
+        if (techs.length === 0) {
+          grid.innerHTML = '<div class="col-12 text-center py-5 text-muted">No technicians registered yet.</div>';
+          return;
+        }
+
+        grid.innerHTML = techs.map(t => {
+          const availBadge = t.availability === 'AVAILABLE' ? 'bg-success' :
+                             t.availability === 'BUSY' ? 'bg-warning text-dark' : 'bg-secondary';
+
+          return `
+            <div class="col-md-6 col-lg-4">
+              <div class="card h-100 card-hover p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <div class="stat-icon-wrapper bg-primary-subtle text-primary fs-4">
+                    <i class="bi bi-wrench"></i>
+                  </div>
+                  <span class="badge ${availBadge} small">${t.availability}</span>
+                </div>
+
+                <h5 class="fw-bold text-dark mb-1">${t.name}</h5>
+                <div class="text-muted small mb-3">
+                  <i class="bi bi-envelope me-1"></i>${t.email} | <i class="bi bi-telephone ms-1 me-1"></i>${t.phone || 'N/A'}
+                </div>
+
+                <div class="p-3 bg-light rounded small mb-3">
+                  <div class="mb-1"><strong>Specialization:</strong> ${t.specialization || 'General'}</div>
+                  <div><strong>Experience:</strong> ${t.experience_years} years</div>
+                </div>
+
+                <div class="row text-center border-top border-bottom py-2 my-2 small g-0">
+                  <div class="col-6 border-end">
+                    <div class="fw-bold fs-6 text-primary">${t.active_jobs || 0}</div>
+                    <div class="text-muted" style="font-size:0.75rem;">Active Jobs</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="fw-bold fs-6 text-success">${t.completed_jobs || 0}</div>
+                    <div class="text-muted" style="font-size:0.75rem;">Completed</div>
+                  </div>
+                </div>
+
+                <div class="mt-3">
+                  <label class="form-label small fw-semibold text-muted mb-1">Update Availability:</label>
+                  <select class="form-select form-select-sm" onchange="changeAvailability(${t.id}, this.value)">
+                    <option value="AVAILABLE" ${t.availability === 'AVAILABLE' ? 'selected' : ''}>AVAILABLE</option>
+                    <option value="BUSY" ${t.availability === 'BUSY' ? 'selected' : ''}>BUSY</option>
+                    <option value="INACTIVE" ${t.availability === 'INACTIVE' ? 'selected' : ''}>INACTIVE</option>
+                  </select>
+                </div>
+
+                <div class="mt-2 text-end">
+                  <button class="btn btn-sm ${t.is_active ? 'btn-outline-danger' : 'btn-outline-success'} w-100" onclick="toggleActiveStatus(${t.id}, ${t.is_active})">
+                    <i class="bi ${t.is_active ? 'bi-person-slash' : 'bi-person-check'} me-1"></i>
+                    ${t.is_active ? 'Deactivate Account' : 'Reactivate Account'}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        grid.innerHTML = `<div class="col-12 text-center text-danger py-4">${err.message}</div>`;
+      }
+    }
+
+    async function changeAvailability(id, availability) {
+      try {
+        await API.patch(`/technicians/${id}/availability`, { availability });
+        UI.showToast('Availability status updated', 'success');
+        loadTechnicians();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    async function toggleActiveStatus(id, currentActive) {
+      const action = currentActive ? 'deactivate' : 'activate';
+      if (!confirm(`Are you sure you want to ${action} this technician account?`)) return;
+      try {
+        const res = await API.patch(`/technicians/${id}/toggle-active`, {});
+        UI.showToast(res.message || 'Status updated', 'success');
+        loadTechnicians();
+      } catch (err) {
+        UI.showToast(err.message, 'error');
+      }
+    }
+
+    const form = document.getElementById('addTechForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const modalAlert = document.getElementById('modalAlert');
+      modalAlert.innerHTML = '';
+
+      const payload = {
+        name: document.getElementById('techName').value.trim(),
+        email: document.getElementById('techEmail').value.trim(),
+        phone: document.getElementById('techPhone').value.trim(),
+        password: document.getElementById('techPassword').value,
+        specialization: document.getElementById('techSpec').value.trim(),
+        experienceYears: document.getElementById('techExp').value,
+        availability: document.getElementById('techAvail').value
+      };
+
+      try {
+        await API.post('/technicians', payload);
+        UI.showToast('Technician registered successfully!', 'success');
+
+        const modalEl = document.getElementById('addTechModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        form.reset();
+
+        loadTechnicians();
+      } catch (err) {
+        modalAlert.innerHTML = `<div class="alert alert-danger py-2 small mb-3">${err.message}</div>`;
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadTechnicians);
+  </script>
+</body>
+</html>

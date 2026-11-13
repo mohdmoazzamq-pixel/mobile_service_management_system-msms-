@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Service Management System (MSMS)</title>
+  <script>
+    // Seamless routing to application
+    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+      if (window.location.pathname !== '/frontend/index.html' && window.location.pathname !== '/index.html') {
+        window.location.replace('/index.html');
+      }
+    }
+  </script>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f8fafc; color: #1e293b;">
+  <div style="text-align: center; padding: 20px;">
+    <h3 style="margin-bottom: 8px;">Mobile Service Management System</h3>
+    <p style="color: #64748b; margin-bottom: 16px;">Loading application...</p>
+    <p><a href="/index.html" style="color: #2563eb; text-decoration: none; font-weight: 600;">Click here if you are not redirected automatically</a></p>
+  </div>
+</body>
+</html>

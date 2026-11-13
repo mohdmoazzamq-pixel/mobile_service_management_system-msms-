@@ -1,0 +1,57 @@
+# =====================================================================
+# Mobile Service Management System (MSMS) - .gitignore
+# =====================================================================
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment Variables & Secrets (CRITICAL: Do NOT commit secrets)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.production
+
+# Uploaded Files & Attachments (Preserve structure via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Database Backups & Dumps (Preserve folder via .gitkeep)
+database/backups/*
+!database/backups/.gitkeep
+
+# Logs & Runtime
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Operating System & Cache
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor & IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Temporary & Scratch Files
+*.tmp
+*.bak
+extracted_doc.txt

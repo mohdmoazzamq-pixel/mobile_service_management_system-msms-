@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technician Job Queue | MSMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-secondary border-bottom sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-white" href="/technician/index.html">
+        <span class="brand-icon bg-warning text-dark"><i class="bi bi-wrench"></i></span>
+        MSMS Technician Workbench
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#techNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="techNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link active text-white" href="/technician/index.html"><i class="bi bi-list-task me-1"></i>My Assigned Jobs</a></li>
+        </ul>
+        <div id="nav-user-container"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="py-4">
+    <div class="container">
+
+      <!-- Header & Quick Metrics -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="fw-bold text-dark mb-1" id="techHeaderTitle">Technician Jobs Queue</h3>
+          <p class="text-muted small mb-0">Hardware repairs assigned to your bench. Select a job to record diagnosis or issue parts.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="badge bg-light text-dark border p-2">
+            Status: <span class="fw-bold text-success" id="myAvailability">AVAILABLE</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Row -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-4">
+          <div class="card p-3 border-0 shadow-sm bg-white">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-primary-subtle text-primary me-3 fs-4">
+                <i class="bi bi-tools"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Active In-Bench Repairs</div>
+                <h3 class="fw-bold mb-0 text-dark" id="statActiveJobs">-</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4">
+          <div class="card p-3 border-0 shadow-sm bg-white">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-warning-subtle text-warning me-3 fs-4">
+                <i class="bi bi-pause-circle"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Waiting for Spare Parts</div>
+                <h3 class="fw-bold mb-0 text-dark" id="statWaitingParts">-</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4">
+          <div class="card p-3 border-0 shadow-sm bg-white">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon-wrapper bg-success-subtle text-success me-3 fs-4">
+                <i class="bi bi-check2-all"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-medium">Completed Repairs</div>
+                <h3 class="fw-bold mb-0 text-dark" id="statCompletedJobs">-</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jobs Table -->
+      <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0 text-dark">Assigned Hardware Jobs</h5>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadTechnicianJobs()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase text-muted">
+              <tr>
+                <th>Job / Booking #</th>
+                <th>Device</th>
+                <th>Customer Contact</th>
+                <th>Reported Defect</th>
+                <th>Repair Status</th>
+                <th>Service</th>
+                <th class="text-end">Workbench</th>
+              </tr>
+            </thead>
+            <tbody id="jobsTbody">
+              <tr>
+                <td colspan="7" class="text-center py-5 text-muted">Loading assigned jobs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/auth.js"></script>
+  <script src="/assets/js/router.js"></script>
+  <script>
+    const user = Auth.requireAuth(['technician']);
+
+    async function loadTechnicianJobs() {
+      if (!user) return;
+      document.getElementById('techHeaderTitle').textContent = `Assigned Jobs: ${user.name}`;
+
+      const tbody = document.getElementById('jobsTbody');
+      try {
+        const res = await API.get('/technician/jobs');
+        const jobs = res.data || [];
+
+        const activeCount = jobs.filter(j => !['REPAIR_COMPLETED', 'DELIVERED'].includes(j.repair_status)).length;
+        const waitingCount = jobs.filter(j => j.repair_status === 'WAITING_FOR_SPARE_PARTS').length;
+        const completedCount = jobs.filter(j => j.repair_status === 'REPAIR_COMPLETED' || j.repair_status === 'DELIVERED').length;
+
+        document.getElementById('statActiveJobs').textContent = activeCount;
+        document.getElementById('statWaitingParts').textContent = waitingCount;
+        document.getElementById('statCompletedJobs').textContent = completedCount;
+
+        if (jobs.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-cup-hot fs-2 d-block mb-2 text-secondary"></i>
+                You have no repair jobs assigned right now.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = jobs.map(j => `
+          <tr>
+            <td>
+              <span class="fw-bold text-dark font-monospace">${j.booking_number}</span>
+              <div class="text-muted small" style="font-size:0.75rem;">Repair #${j.id}</div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">${j.brand} ${j.model}</div>
+              <div class="text-muted font-monospace" style="font-size:0.75rem;">IMEI: ${j.imei || 'N/A'}</div>
+            </td>
+            <td>
+              <div class="fw-medium text-dark">${j.customer_name}</div>
+              <div class="text-muted small" style="font-size:0.75rem;">${j.customer_phone || j.customer_email}</div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark small">${j.problem_category}</div>
+              <div class="text-muted small text-truncate" style="max-width: 180px;">${j.problem_description}</div>
+            </td>
+            <td>${UI.getStatusBadge(j.repair_status)}</td>
+            <td class="small text-muted">${j.service_name || 'General Repair'}</td>
+            <td class="text-end">
+              <a href="/technician/repair-detail.html?id=${j.id}" class="btn btn-sm btn-primary fw-semibold">
+                <i class="bi bi-wrench-adjustable me-1"></i>Open Workbench
+              </a>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${err.message}</td></tr>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTechnicianJobs);
+  </script>
+</body>
+</html>
