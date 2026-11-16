@@ -25,6 +25,7 @@ const app = express();
 
 // Security headers
 app.use(helmet({
+  contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
@@ -79,6 +80,16 @@ pageRoutes.forEach(({ paths: routePaths, file }) => {
     app.get(r, (req, res) => res.sendFile(filePath));
     app.get(`/frontend${r}`, (req, res) => res.sendFile(filePath));
   });
+});
+
+// Explicit Favicon routes
+app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
+  const file = req.path.endsWith('.svg') ? 'favicon.svg' : 'favicon.ico';
+  res.sendFile(path.join(frontendPath, file));
+});
+app.get(['/frontend/favicon.ico', '/frontend/favicon.svg'], (req, res) => {
+  const file = req.path.endsWith('.svg') ? 'favicon.svg' : 'favicon.ico';
+  res.sendFile(path.join(frontendPath, file));
 });
 
 // Serve frontend static assets & web pages (both at root / and /frontend/)

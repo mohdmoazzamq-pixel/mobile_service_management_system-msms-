@@ -7,18 +7,35 @@
 (function () {
   'use strict';
 
+  // Prevent duplicate router initialization if already active
+  if (window.MSMSRouter && window.MSMSRouter.initialized) {
+    return;
+  }
+
   const MSMSRouter = {
     initialized: false,
+    _navSequence: 0,
+    _progressTimer: null,
 
     // Route alias mapping for clean URLs <-> file paths
     routeMap: {
       '/': '/index.html',
       '/index': '/index.html',
+      '/index.html': '/index.html',
+      '/frontend': '/index.html',
+      '/frontend/': '/index.html',
+      '/frontend/index': '/index.html',
+      '/frontend/index.html': '/index.html',
       '/login': '/login.html',
+      '/login.html': '/login.html',
       '/register': '/register.html',
+      '/register.html': '/register.html',
       '/forgot-password': '/forgot-password.html',
+      '/forgot-password.html': '/forgot-password.html',
       '/reset-password': '/reset-password.html',
+      '/reset-password.html': '/reset-password.html',
       '/404': '/404.html',
+      '/404.html': '/404.html',
       '/customer': '/customer/index.html',
       '/customer/': '/customer/index.html',
       '/customer/index': '/customer/index.html',
@@ -46,25 +63,55 @@
       '/technician/repair-detail': '/technician/repair-detail.html'
     },
 
+    isHomeRoute(path) {
+      if (!path) return true;
+      const clean = path.split('?')[0].split('#')[0].trim().replace(/^\.\//, '/');
+      const normalized = clean.startsWith('/') ? clean : '/' + clean;
+      return (
+        normalized === '/' ||
+        normalized === '/index' ||
+        normalized === '/index.html' ||
+        normalized === '/frontend' ||
+        normalized === '/frontend/' ||
+        normalized === '/frontend/index' ||
+        normalized === '/frontend/index.html'
+      );
+    },
+
+    normalizePath(path) {
+      if (this.isHomeRoute(path)) {
+        return '/';
+      }
+      let clean = (path || '').split('?')[0].split('#')[0].trim().replace(/^\.\//, '/');
+      if (!clean.startsWith('/')) clean = '/' + clean;
+      if (clean.startsWith('/frontend/')) {
+        clean = clean.replace(/^\/frontend/, '');
+      }
+      return clean || '/';
+    },
+
     resolvePath(path) {
-      if (!path) return '/index.html';
-      const clean = path.split('?')[0].split('#')[0];
-      // Check if alias exists
-      if (this.routeMap[clean]) {
-        return this.routeMap[clean];
+      if (this.isHomeRoute(path)) {
+        if (window.location.pathname.startsWith('/frontend/')) {
+          return '/frontend/index.html';
+        }
+        return '/index.html';
       }
-      if (this.routeMap[clean.replace(/\/$/, '')]) {
-        return this.routeMap[clean.replace(/\/$/, '')];
+      const clean = this.normalizePath(path);
+      let resolved = this.routeMap[clean] || this.routeMap[clean.replace(/\/$/, '')];
+      if (!resolved) {
+        resolved = (!clean.endsWith('.html') && !clean.includes('.')) ? clean + '.html' : clean;
       }
-      // If path doesn't end with .html and not an asset/api, try appending .html
-      if (!clean.endsWith('.html') && !clean.includes('.')) {
-        return clean + '.html';
+      if (window.location.pathname.startsWith('/frontend/') && !resolved.startsWith('/frontend/')) {
+        resolved = '/frontend' + (resolved.startsWith('/') ? resolved : '/' + resolved);
       }
-      return clean;
+      return resolved;
     },
 
     async navigate(targetUrl, options = { pushState: true }) {
       if (!targetUrl) return;
+
+      const currentNav = ++this._navSequence;
 
       // Split URL into path, query, hash
       const parser = document.createElement('a');
@@ -72,21 +119,31 @@
 
       // Handle pure hash links (e.g. #services, #tracking)
       if (parser.pathname === window.location.pathname && parser.hash && !parser.search) {
-        const elem = document.querySelector(parser.hash);
-        if (elem) {
-          elem.scrollIntoView({ behavior: 'smooth' });
-          if (options.pushState) history.pushState(null, '', parser.hash);
-          return;
-        }
+        try {
+          const elem = document.querySelector(parser.hash);
+          if (elem) {
+            elem.scrollIntoView({ behavior: 'smooth' });
+            if (options.pushState) history.pushState(null, '', parser.hash);
+            return;
+          }
+        } catch (_) {}
       }
 
       const rawPath = parser.pathname;
-      const queryString = parser.search;
-      const hash = parser.hash;
-      const fullTarget = rawPath + queryString + hash;
+      const queryString = parser.search || '';
+      const hash = parser.hash || '';
+
+      // Determine canonical display URL and normalized target
+      const isHome = this.isHomeRoute(rawPath);
+      const normalizedPath = isHome ? '/' : this.normalizePath(rawPath);
+      const fullTarget = normalizedPath + queryString + hash;
+
+      // Compare against current location
+      const currentNormalized = this.normalizePath(window.location.pathname);
+      const currentFull = currentNormalized + window.location.search + window.location.hash;
 
       // Check if same URL
-      if (fullTarget === (window.location.pathname + window.location.search + window.location.hash) && !options.force) {
+      if (fullTarget === currentFull && !options.force) {
         return;
       }
 
@@ -96,9 +153,29 @@
         // Show subtle loading indicator
         this.showLoadingIndicator();
 
-        const response = await fetch(resolvedFetchPath, {
+        let response = await fetch(resolvedFetchPath, {
           headers: { 'X-Requested-With': 'MSMS-Router' }
         });
+
+        // Resilient fallback for home route
+        if (!response.ok && isHome) {
+          const fallbacks = ['/index.html', '/frontend/index.html', '/', 'index.html'];
+          for (const fb of fallbacks) {
+            if (fb === resolvedFetchPath) continue;
+            try {
+              const fbRes = await fetch(fb, { headers: { 'X-Requested-With': 'MSMS-Router' } });
+              if (fbRes.ok) {
+                response = fbRes;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+
+        // Abort if another navigation was requested in the meantime
+        if (currentNav !== this._navSequence) {
+          return;
+        }
 
         if (!response.ok) {
           // If 404, try loading 404.html
@@ -106,24 +183,28 @@
             const notFoundRes = await fetch('/404.html').catch(() => null);
             if (notFoundRes && notFoundRes.ok) {
               const html = await notFoundRes.text();
-              this.applyPage(html, '/404.html', options.pushState ? targetUrl : null);
+              this.applyPage(html, '/404.html', options.pushState ? '/404' : null);
               this.hideLoadingIndicator();
               return;
             }
           }
           // Fallback to normal navigation
-          window.location.href = targetUrl;
+          window.location.href = isHome ? '/' : targetUrl;
           return;
         }
 
         const html = await response.text();
+        if (currentNav !== this._navSequence) return;
+
         this.applyPage(html, fullTarget, options.pushState ? fullTarget : null);
         this.hideLoadingIndicator();
 
         if (hash) {
           setTimeout(() => {
-            const targetElem = document.querySelector(hash);
-            if (targetElem) targetElem.scrollIntoView({ behavior: 'smooth' });
+            try {
+              const targetElem = document.querySelector(hash);
+              if (targetElem) targetElem.scrollIntoView({ behavior: 'smooth' });
+            } catch (_) {}
           }, 100);
         } else {
           window.scrollTo(0, 0);
@@ -131,7 +212,7 @@
 
       } catch (err) {
         console.warn('[MSMS Router] SPA transition failed, falling back to full navigation:', err);
-        window.location.href = targetUrl;
+        window.location.href = isHome ? '/' : targetUrl;
       }
     },
 
@@ -154,7 +235,14 @@
 
       // Check for modals in body that might be outside main
       const newModals = doc.querySelectorAll('.modal');
-      // Clean up existing open modals / backdrops
+
+      // Clean up existing open bootstrap modals & backdrops
+      document.querySelectorAll('.modal.show').forEach(m => {
+        const inst = window.bootstrap?.Modal?.getInstance(m);
+        if (inst) {
+          try { inst.hide(); } catch (_) {}
+        }
+      });
       document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
       document.body.classList.remove('modal-open');
       document.body.style.removeProperty('padding-right');
@@ -179,9 +267,15 @@
 
       } else {
         // Full body swap
+        Array.from(document.body.attributes).forEach(attr => {
+          if (!doc.body.hasAttribute(attr.name)) {
+            document.body.removeAttribute(attr.name);
+          }
+        });
+        Array.from(doc.body.attributes).forEach(attr => {
+          document.body.setAttribute(attr.name, attr.value);
+        });
         document.body.innerHTML = doc.body.innerHTML;
-        // Copy body class and attributes
-        document.body.className = doc.body.className;
       }
 
       // Re-initialize dynamic navigation / auth bar
@@ -192,24 +286,35 @@
       // Re-bind click intercepts on newly loaded DOM elements
       this.bindInterceptors();
 
-      // Execute newly injected inline scripts
-      this.executeScripts(doc);
+      // Execute newly injected inline scripts in global context
+      this.executeScripts(doc, displayUrl);
 
-      // Dispatch route change events
+      // Dispatch route change events (pages initialize on this event)
       window.dispatchEvent(new CustomEvent('msms:routechange', { detail: { url: displayUrl } }));
-      document.dispatchEvent(new Event('DOMContentLoaded'));
     },
 
     updateNavLinks(targetUrl, newDoc) {
-      // If newDoc has a navbar, match active items
       const newNav = newDoc.querySelector('.navbar');
       const curNav = document.querySelector('.navbar');
       if (newNav && curNav) {
         const curNavLinks = curNav.querySelectorAll('.nav-link');
+        const isCurrentHome = this.isHomeRoute(targetUrl);
+        const normTarget = this.normalizePath(targetUrl);
+
         curNavLinks.forEach(link => {
           const href = link.getAttribute('href');
-          if (href && targetUrl.includes(href.split('?')[0])) {
+          if (!href) return;
+          const isHomeLink = this.isHomeRoute(href);
+
+          if (isCurrentHome && isHomeLink) {
             link.classList.add('active');
+          } else if (!isCurrentHome && !isHomeLink) {
+            const normHref = this.normalizePath(href);
+            if (normHref === normTarget) {
+              link.classList.add('active');
+            } else {
+              link.classList.remove('active');
+            }
           } else {
             link.classList.remove('active');
           }
@@ -217,15 +322,18 @@
       }
     },
 
-    executeScripts(doc) {
+    executeScripts(doc, displayUrl) {
       const scripts = doc.querySelectorAll('script');
       scripts.forEach(s => {
         // Only run inline scripts that are not external bundles already loaded
         if (!s.src && s.textContent.trim()) {
           try {
-            // Execute inside Function scope to prevent variable re-declaration errors across SPA transitions
-            const fn = new Function(s.textContent);
-            fn();
+            // Remove raw unicode non-breaking spaces
+            const cleanCode = s.textContent.replace(/\u00a0/g, ' ');
+            // Append sourceURL for clear debugging in DevTools
+            const sourceTag = '\n//# sourceURL=' + (window.location.origin + (displayUrl || '/inline-script.js'));
+            // Indirect eval executes in global scope so top-level function declarations bind to window
+            (0, eval)(cleanCode + sourceTag);
           } catch (e) {
             console.error('[MSMS Router] Script execution error:', e);
           }
@@ -234,6 +342,7 @@
     },
 
     showLoadingIndicator() {
+      if (this._progressTimer) clearTimeout(this._progressTimer);
       let bar = document.getElementById('router-progress-bar');
       if (!bar) {
         bar = document.createElement('div');
@@ -242,17 +351,20 @@
         document.body.appendChild(bar);
       }
       bar.style.width = '30%';
-      setTimeout(() => {
-        if (bar) bar.style.width = '75%';
+      this._progressTimer = setTimeout(() => {
+        const b = document.getElementById('router-progress-bar');
+        if (b) b.style.width = '75%';
       }, 100);
     },
 
     hideLoadingIndicator() {
+      if (this._progressTimer) clearTimeout(this._progressTimer);
       const bar = document.getElementById('router-progress-bar');
       if (bar) {
         bar.style.width = '100%';
-        setTimeout(() => {
-          bar.remove();
+        this._progressTimer = setTimeout(() => {
+          const b = document.getElementById('router-progress-bar');
+          if (b) b.remove();
         }, 200);
       }
     },
@@ -264,6 +376,16 @@
         a._hasRouterBound = true;
 
         a.addEventListener('click', (e) => {
+          // Allow opening in new tabs via Ctrl/Cmd/Shift/Alt or middle-click, and file downloads
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || (e.button && e.button !== 0) || a.hasAttribute('download')) {
+            return;
+          }
+
+          // Never intercept if click originated on or inside a button, input, or role tab
+          if (e.target.closest('button, input, select, textarea, [role="group"], .btn-group, [data-role]')) {
+            return;
+          }
+
           const href = a.getAttribute('href');
           const target = a.getAttribute('target');
 
@@ -274,12 +396,14 @@
 
           // Hash links on same page
           if (href.startsWith('#')) {
-            const elem = document.querySelector(href);
-            if (elem) {
-              e.preventDefault();
-              elem.scrollIntoView({ behavior: 'smooth' });
-              history.pushState(null, '', href);
-            }
+            try {
+              const elem = document.querySelector(href);
+              if (elem) {
+                e.preventDefault();
+                elem.scrollIntoView({ behavior: 'smooth' });
+                history.pushState(null, '', href);
+              }
+            } catch (_) {}
             return;
           }
 
@@ -288,13 +412,24 @@
         });
       });
 
-      // Intercept elements with data-navigate or data-href
+      // Intercept elements with data-navigate or data-href (excluding buttons and role selectors)
       document.querySelectorAll('[data-navigate], [data-href]').forEach(el => {
+        // Exclude button elements, form controls, and role group members
+        if (el.tagName === 'BUTTON' || el.getAttribute('type') === 'button' || el.closest('#roleBtnGroup') || el.hasAttribute('data-role')) {
+          return;
+        }
+
         if (el._hasRouterBound) return;
         el._hasRouterBound = true;
         el.style.cursor = 'pointer';
 
         el.addEventListener('click', (e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || (e.button && e.button !== 0)) {
+            return;
+          }
+          if (e.target.closest('button, input, select, textarea, [role="group"], [data-role]')) {
+            return;
+          }
           const targetUrl = el.getAttribute('data-navigate') || el.getAttribute('data-href');
           if (targetUrl) {
             e.preventDefault();
@@ -310,28 +445,39 @@
 
       // Bind popstate for browser back/forward buttons
       window.addEventListener('popstate', (e) => {
-        const target = window.location.pathname + window.location.search + window.location.hash;
+        const raw = window.location.pathname + window.location.search + window.location.hash;
+        const target = this.isHomeRoute(window.location.pathname) ? '/' : raw;
         this.navigate(target, { pushState: false, force: true });
       });
 
-      // Initial binding
+      // Bind initial link click intercepts
       this.bindInterceptors();
 
-      // Observer for dynamically added buttons/links
-      const observer = new MutationObserver(() => {
-        this.bindInterceptors();
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
+      // Safe observer setup for dynamically added buttons/links
+      const startObserver = () => {
+        if (typeof MutationObserver !== 'undefined' && document.body) {
+          const observer = new MutationObserver(() => {
+            this.bindInterceptors();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+        }
+      };
+
+      if (document.body) {
+        startObserver();
+      } else {
+        document.addEventListener('DOMContentLoaded', startObserver);
+      }
     }
   };
 
   // Expose globally
   window.MSMSRouter = MSMSRouter;
-  window.navigate = function (url) {
-    MSMSRouter.navigate(url);
+  window.navigate = function (url, options) {
+    return MSMSRouter.navigate(url, options);
   };
 
-  // Auto-initialize when DOM is ready
+  // Auto-initialize router when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => MSMSRouter.init());
   } else {

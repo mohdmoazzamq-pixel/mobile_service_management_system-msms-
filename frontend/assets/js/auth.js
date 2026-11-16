@@ -85,8 +85,8 @@ const Auth = {
   }
 };
 
-// Ensure router is loaded if not already present
-if (!window.MSMSRouter) {
+// Ensure router is loaded if not already present or queued in DOM
+if (!window.MSMSRouter && !document.querySelector('script[src*="router.js"]')) {
   const routerScript = document.createElement('script');
   routerScript.src = '/assets/js/router.js';
   document.head.appendChild(routerScript);
