@@ -33,10 +33,10 @@ async function getRepairById(req, res, next) {
     const repair = repairRes.rows[0];
 
     // Authorization checks
-    if (req.user.role === 'customer' && repair.customer_id !== req.user.customer_id) {
+    if (req.user.role === 'customer' && String(repair.customer_id) !== String(req.user.customer_id)) {
       return sendError(res, 'Access denied. You do not own this repair job.', 403);
     }
-    if (req.user.role === 'technician' && repair.technician_id !== req.user.technician_id) {
+    if (req.user.role === 'technician' && String(repair.technician_id) !== String(req.user.technician_id)) {
       return sendError(res, 'Access denied. You are not assigned to this repair job.', 403);
     }
 
@@ -93,7 +93,7 @@ async function updateRepairStatus(req, res, next) {
 
     // Check permissions (TC-10: Technician updates unassigned repair -> denied)
     if (req.user.role === 'technician') {
-      if (!repair.technician_id || repair.technician_id !== req.user.technician_id) {
+      if (!repair.technician_id || String(repair.technician_id) !== String(req.user.technician_id)) {
         client.release();
         return sendError(res, 'Access denied. You can only update repairs assigned to you.', 403);
       }
@@ -155,7 +155,7 @@ async function updateDiagnosis(req, res, next) {
 
     // Permissions check
     if (req.user.role === 'technician') {
-      if (!repair.technician_id || repair.technician_id !== req.user.technician_id) {
+      if (!repair.technician_id || String(repair.technician_id) !== String(req.user.technician_id)) {
         return sendError(res, 'Access denied. You can only update repairs assigned to you.', 403);
       }
     } else if (req.user.role !== 'admin') {
@@ -200,7 +200,7 @@ async function usePart(req, res, next) {
 
     // Permissions check
     if (req.user.role === 'technician') {
-      if (!repair.technician_id || repair.technician_id !== req.user.technician_id) {
+      if (!repair.technician_id || String(repair.technician_id) !== String(req.user.technician_id)) {
         client.release();
         return sendError(res, 'Access denied. You can only issue parts for repairs assigned to you.', 403);
       }

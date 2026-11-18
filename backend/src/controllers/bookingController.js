@@ -107,7 +107,7 @@ async function createBooking(req, res, next) {
       return sendError(res, 'Device not found', 404);
     }
 
-    if (deviceCheck.rows[0].customer_id !== customerId && req.user.role !== 'admin') {
+    if (String(deviceCheck.rows[0].customer_id) !== String(customerId) && req.user.role !== 'admin') {
       client.release();
       return sendError(res, 'Access denied. You do not own this device.', 403);
     }
@@ -202,12 +202,12 @@ async function getBookingById(req, res, next) {
     const booking = bookingRes.rows[0];
 
     // Customer can only view own booking
-    if (req.user.role === 'customer' && booking.customer_id !== req.user.customer_id) {
+    if (req.user.role === 'customer' && String(booking.customer_id) !== String(req.user.customer_id)) {
       return sendError(res, 'Access denied. You do not own this booking.', 403);
     }
 
     // Technician can only view assigned booking
-    if (req.user.role === 'technician' && booking.technician_id !== req.user.technician_id) {
+    if (req.user.role === 'technician' && String(booking.technician_id) !== String(req.user.technician_id)) {
       return sendError(res, 'Access denied. You are not assigned to this repair.', 403);
     }
 
@@ -375,7 +375,7 @@ async function cancelBooking(req, res, next) {
 
     // Customer can only cancel their own pending booking
     if (req.user.role === 'customer') {
-      if (booking.customer_id !== req.user.customer_id) {
+      if (String(booking.customer_id) !== String(req.user.customer_id)) {
         client.release();
         return sendError(res, 'Access denied. You do not own this booking.', 403);
       }

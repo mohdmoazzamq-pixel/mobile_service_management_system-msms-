@@ -25,6 +25,7 @@
 
       <div class="collapse navbar-collapse" id="adminNav">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+          <li class="nav-item"><a class="nav-link text-white-50" href="/" data-no-spa="true"><i class="bi bi-house-door me-1"></i>Home</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="/admin/index.html"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="/admin/bookings.html"><i class="bi bi-inbox me-1"></i>Bookings</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="/admin/technicians.html"><i class="bi bi-people me-1"></i>Technicians</a></li>
@@ -441,8 +442,8 @@
       }
     }
 
-    window.openCreateInvoiceModal = openCreateInvoiceModal;
-    window.viewInvoiceDetail = viewInvoiceDetail;
+    window.openInvoice = openInvoice;
+    window.openPaymentModal = openPaymentModal;
 
     function initAdminInvoices() {
       const user = Auth.requireAuth(['admin']);

@@ -137,6 +137,151 @@ async function seedData() {
       }
     }
 
+    // 7. Seed Demo Bookings, Repairs, and Invoices for Demo Customers
+    const adminUserRes = await client.query("SELECT id FROM users WHERE email = 'admin@msms.local'");
+    const adminUserId = adminUserRes.rows[0]?.id;
+
+    const alexTechRes = await client.query("SELECT t.id, t.user_id FROM technicians t JOIN users u ON t.user_id = u.id WHERE u.email = 'tech.alex@msms.local'");
+    const alexTechId = alexTechRes.rows[0]?.id;
+    const alexUserId = alexTechRes.rows[0]?.user_id;
+
+    const sarahTechRes = await client.query("SELECT t.id, t.user_id FROM technicians t JOIN users u ON t.user_id = u.id WHERE u.email = 'tech.sarah@msms.local'");
+    const sarahTechId = sarahTechRes.rows[0]?.id;
+    const sarahUserId = sarahTechRes.rows[0]?.user_id;
+
+    const screenSvcRes = await client.query("SELECT id FROM services WHERE service_name = 'Screen Replacement'");
+    const screenSvcId = screenSvcRes.rows[0]?.id;
+
+    const battSvcRes = await client.query("SELECT id FROM services WHERE service_name = 'Battery Replacement'");
+    const battSvcId = battSvcRes.rows[0]?.id;
+
+    const portSvcRes = await client.query("SELECT id FROM services WHERE service_name = 'Charging Port Repair'");
+    const portSvcId = portSvcRes.rows[0]?.id;
+
+    const dispPartRes = await client.query("SELECT id FROM spare_parts WHERE part_code = 'DISP-IP14P-01'");
+    const dispPartId = dispPartRes.rows[0]?.id;
+
+    const battPartRes = await client.query("SELECT id FROM spare_parts WHERE part_code = 'BATT-SS23U-01'");
+    const battPartId = battPartRes.rows[0]?.id;
+
+    if (johnCustId) {
+      const iphoneRes = await client.query("SELECT id FROM devices WHERE customer_id = $1 AND model = 'iPhone 14 Pro'", [johnCustId]);
+      const iphoneId = iphoneRes.rows[0]?.id;
+
+      const s23Res = await client.query("SELECT id FROM devices WHERE customer_id = $1 AND model = 'Galaxy S23 Ultra'", [johnCustId]);
+      const s23Id = s23Res.rows[0]?.id;
+
+      // Booking 1: Screen repair for iPhone 14 Pro (Completed & Invoiced)
+      if (iphoneId && screenSvcId) {
+        const b1Res = await client.query(`
+          INSERT INTO bookings (booking_number, customer_id, device_id, service_id, problem_category, problem_description, preferred_date, booking_status)
+          VALUES ('BK-20261101-JD01', $1, $2, $3, 'Display & Screen', 'Front screen cracked after dropping; touch is unresponsive in lower half.', '2026-11-01', 'APPROVED')
+          ON CONFLICT (booking_number) DO UPDATE SET booking_status = 'APPROVED'
+          RETURNING id
+        `, [johnCustId, iphoneId, screenSvcId]);
+
+        const b1Id = b1Res.rows[0].id;
+        const rep1Res = await client.query(`
+          INSERT INTO repairs (booking_id, technician_id, diagnosis, estimated_cost, final_cost, repair_status, actual_completion)
+          VALUES ($1, $2, 'OLED digitizer shattered. Internal logic board tested fine.', 269.99, 269.99, 'REPAIR_COMPLETED', CURRENT_TIMESTAMP)
+          ON CONFLICT (booking_id) DO UPDATE SET repair_status = 'REPAIR_COMPLETED', technician_id = EXCLUDED.technician_id, final_cost = 269.99
+          RETURNING id
+        `, [b1Id, alexTechId]);
+
+        const rep1Id = rep1Res.rows[0].id;
+
+        // History
+        await client.query(`
+          INSERT INTO repair_status_history (repair_id, old_status, new_status, updated_by, remarks)
+          VALUES 
+            ($1, NULL, 'DEVICE_RECEIVED', $2, 'Device received at repair center.'),
+            ($1, 'DEVICE_RECEIVED', 'UNDER_DIAGNOSIS', $2, 'Screen diagnostic run, OEM panel ordered.'),
+            ($1, 'UNDER_DIAGNOSIS', 'REPAIR_IN_PROGRESS', $2, 'Display assembly replaced and sealed.'),
+            ($1, 'REPAIR_IN_PROGRESS', 'REPAIR_COMPLETED', $2, 'Display calibration successful. Ready for pickup.')
+          ON CONFLICT DO NOTHING
+        `, [rep1Id, adminUserId]);
+
+        // Repair part
+        if (dispPartId && alexUserId) {
+          const exPart = await client.query('SELECT id FROM repair_parts WHERE repair_id = $1 AND part_id = $2', [rep1Id, dispPartId]);
+          if (exPart.rowCount === 0) {
+            await client.query(`
+              INSERT INTO repair_parts (repair_id, part_id, quantity, unit_price, used_by)
+              VALUES ($1, $2, 1, 220.00, $3)
+            `, [rep1Id, dispPartId, alexUserId]);
+          }
+        }
+
+        // Invoice 1
+        await client.query(`
+          INSERT INTO invoices (invoice_number, repair_id, customer_id, subtotal, tax_amount, discount, total_amount, payment_status, payment_method)
+          VALUES ('INV-20261101-0001', $1, $2, 269.99, 21.60, 10.00, 281.59, 'PAID', 'CREDIT_CARD')
+          ON CONFLICT (invoice_number) DO UPDATE SET payment_status = 'PAID', total_amount = 281.59
+        `, [rep1Id, johnCustId]);
+      }
+
+      // Booking 2: Battery replacement for Galaxy S23 Ultra (In Progress & Invoiced)
+      if (s23Id && battSvcId) {
+        const b2Res = await client.query(`
+          INSERT INTO bookings (booking_number, customer_id, device_id, service_id, problem_category, problem_description, preferred_date, booking_status)
+          VALUES ('BK-20261115-JD02', $1, $2, $3, 'Battery & Power', 'Battery drains rapidly from 100% to 15% within 2 hours.', '2026-11-15', 'APPROVED')
+          ON CONFLICT (booking_number) DO UPDATE SET booking_status = 'APPROVED'
+          RETURNING id
+        `, [johnCustId, s23Id, battSvcId]);
+
+        const b2Id = b2Res.rows[0].id;
+        const rep2Res = await client.query(`
+          INSERT INTO repairs (booking_id, technician_id, diagnosis, estimated_cost, final_cost, repair_status)
+          VALUES ($1, $2, 'Battery health degraded to 64%. Swelling detected.', 89.99, NULL, 'REPAIR_IN_PROGRESS')
+          ON CONFLICT (booking_id) DO UPDATE SET repair_status = 'REPAIR_IN_PROGRESS', technician_id = EXCLUDED.technician_id
+          RETURNING id
+        `, [b2Id, sarahTechId]);
+
+        const rep2Id = rep2Res.rows[0].id;
+
+        // History
+        await client.query(`
+          INSERT INTO repair_status_history (repair_id, old_status, new_status, updated_by, remarks)
+          VALUES 
+            ($1, NULL, 'DEVICE_RECEIVED', $2, 'Device received at front desk.'),
+            ($1, 'DEVICE_RECEIVED', 'UNDER_DIAGNOSIS', $2, 'Technician Sarah ran battery charge cycle test.'),
+            ($1, 'UNDER_DIAGNOSIS', 'REPAIR_IN_PROGRESS', $2, 'New OEM battery installed, adhesive curing.')
+          ON CONFLICT DO NOTHING
+        `, [rep2Id, adminUserId]);
+
+        // Repair part
+        if (battPartId && sarahUserId) {
+          const exPart2 = await client.query('SELECT id FROM repair_parts WHERE repair_id = $1 AND part_id = $2', [rep2Id, battPartId]);
+          if (exPart2.rowCount === 0) {
+            await client.query(`
+              INSERT INTO repair_parts (repair_id, part_id, quantity, unit_price, used_by)
+              VALUES ($1, $2, 1, 60.00, $3)
+            `, [rep2Id, battPartId, sarahUserId]);
+          }
+        }
+
+        // Invoice 2
+        await client.query(`
+          INSERT INTO invoices (invoice_number, repair_id, customer_id, subtotal, tax_amount, discount, total_amount, payment_status, payment_method)
+          VALUES ('INV-20261115-0002', $1, $2, 89.99, 7.20, 0.00, 97.19, 'UNPAID', 'CASH')
+          ON CONFLICT (invoice_number) DO UPDATE SET payment_status = 'UNPAID', total_amount = 97.19
+        `, [rep2Id, johnCustId]);
+      }
+    }
+
+    if (emilyCustId) {
+      const pixelRes = await client.query("SELECT id FROM devices WHERE customer_id = $1 AND model = 'Pixel 8'", [emilyCustId]);
+      const pixelId = pixelRes.rows[0]?.id;
+
+      if (pixelId && portSvcId) {
+        await client.query(`
+          INSERT INTO bookings (booking_number, customer_id, device_id, service_id, problem_category, problem_description, preferred_date, booking_status)
+          VALUES ('BK-20261116-EW01', $1, $2, $3, 'Charging & Port', 'Device does not charge unless cable is held at an upward angle.', '2026-11-16', 'PENDING')
+          ON CONFLICT (booking_number) DO NOTHING
+        `, [emilyCustId, pixelId, portSvcId]);
+      }
+    }
+
     await client.query('COMMIT');
     console.log('[SeedData] Seeding completed successfully!');
     console.log('Test Accounts available (all default password: Password123!):');

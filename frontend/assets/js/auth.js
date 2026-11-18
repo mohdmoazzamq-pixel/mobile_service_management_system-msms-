@@ -43,37 +43,35 @@ const Auth = {
   },
 
   initNav() {
-    const user = API.getUser();
+    const token = API.getToken();
+    const user = token ? API.getUser() : null;
+    if (!token && API.getUser()) {
+      API.clearSession();
+    }
     const navUserContainer = document.getElementById('nav-user-container');
 
     if (!navUserContainer) return;
 
-    if (user) {
+    if (token && user) {
       const portalLink = this.getRoleRedirect(user.role);
       navUserContainer.innerHTML = `
-        <div class="d-flex align-items-center gap-3">
-          <div class="text-end d-none d-sm-block">
-            <div class="fw-semibold text-dark small">${user.name}</div>
-            <div class="text-muted text-uppercase" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px;">${user.role}</div>
-          </div>
-          <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
-              <i class="bi bi-person-circle"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-              <li><h6 class="dropdown-header">${user.email}</h6></li>
-              <li><a class="dropdown-item" href="${portalLink}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><button class="dropdown-item text-danger" onclick="Auth.logout()"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</button></li>
-            </ul>
-          </div>
+        <div class="d-flex align-items-center gap-2" id="nav-user-links">
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 small d-none d-md-inline-block">
+            <i class="bi bi-person-circle me-1"></i>${user.name} <span class="text-uppercase fw-bold" style="font-size:0.65rem;">(${user.role})</span>
+          </span>
+          <a href="${portalLink}" class="btn btn-sm btn-primary fw-medium px-3" id="navDashboardBtn">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+          <button type="button" class="btn btn-sm btn-outline-danger fw-medium px-3" id="navLogoutBtn" onclick="Auth.logout()">
+            <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+          </button>
         </div>
       `;
     } else {
       navUserContainer.innerHTML = `
-        <div class="d-flex gap-2">
-          <a href="/login.html" class="btn btn-sm btn-outline-primary fw-medium px-3">Sign In</a>
-          <a href="/register.html" class="btn btn-sm btn-primary fw-medium px-3">Register</a>
+        <div class="d-flex gap-2" id="nav-guest-links" style="display: inline-flex !important;">
+          <a href="/login.html" class="btn btn-sm btn-outline-primary fw-medium px-3" id="navLoginBtn" style="display: inline-block !important;">Sign In</a>
+          <a href="/register.html" class="btn btn-sm btn-primary fw-medium px-3" id="navRegisterBtn" style="display: inline-block !important;">Register</a>
         </div>
       `;
     }
@@ -92,6 +90,9 @@ if (!window.MSMSRouter && !document.querySelector('script[src*="router.js"]')) {
   document.head.appendChild(routerScript);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => Auth.initNav());
+} else {
   Auth.initNav();
-});
+}
+window.addEventListener('msms:routechange', () => Auth.initNav());

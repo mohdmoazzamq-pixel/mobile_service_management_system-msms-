@@ -7,26 +7,36 @@ async function listInvoices(req, res, next) {
     let sql = `
       SELECT inv.*,
              u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
-             b.booking_number, d.brand, d.model,
+             c.address AS customer_address, c.city AS customer_city, c.user_id AS customer_user_id,
+             b.booking_number, b.problem_category,
+             d.brand, d.model, d.imei,
+             s.service_name, s.base_price AS service_base_price,
              r.repair_status
       FROM invoices inv
-      JOIN customers c ON inv.customer_id = c.id
-      JOIN users u ON c.user_id = u.id
       JOIN repairs r ON inv.repair_id = r.id
       JOIN bookings b ON r.booking_id = b.id
       JOIN devices d ON b.device_id = d.id
+      LEFT JOIN services s ON b.service_id = s.id
+      JOIN customers c ON (inv.customer_id = c.id OR b.customer_id = c.id)
+      JOIN users u ON c.user_id = u.id
     `;
     const params = [];
 
     if (req.user.role === 'customer') {
-      params.push(req.user.customer_id);
-      sql += ' WHERE inv.customer_id = $1';
+      params.push(req.user.id);
+      params.push(req.user.customer_id || 0);
+      sql += ' WHERE (c.user_id = $1 OR inv.customer_id = $2)';
     }
 
     sql += ' ORDER BY inv.created_at DESC';
 
     const result = await query(sql, params);
-    return sendSuccess(res, result.rows, 'Invoices retrieved');
+    return res.status(200).json({
+      success: true,
+      data: result.rows,
+      invoices: result.rows,
+      message: 'Invoices retrieved'
+    });
   } catch (error) {
     next(error);
   }
@@ -38,6 +48,7 @@ async function getInvoiceById(req, res, next) {
 
     const invoiceRes = await query(`
       SELECT inv.*,
+             c.user_id AS customer_user_id,
              u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
              c.address AS customer_address, c.city AS customer_city,
              b.booking_number, b.problem_category, b.problem_description,
@@ -65,8 +76,12 @@ async function getInvoiceById(req, res, next) {
 
     // Crucial Security Rule (Section 4.3 / 10 / TC-13):
     // Customer requests another customer's invoice -> request is denied with 403
-    if (req.user.role === 'customer' && invoice.customer_id !== req.user.customer_id) {
-      return sendError(res, 'Access denied. You do not have permission to view this invoice.', 403);
+    if (req.user.role === 'customer') {
+      const matchesCustId = req.user.customer_id && String(invoice.customer_id) === String(req.user.customer_id);
+      const matchesUserId = invoice.customer_user_id && String(invoice.customer_user_id) === String(req.user.id);
+      if (!matchesCustId && !matchesUserId) {
+        return sendError(res, 'Access denied. You do not have permission to view this invoice.', 403);
+      }
     }
 
     // Fetch line items (parts used)

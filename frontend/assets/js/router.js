@@ -256,6 +256,14 @@
           curMain.setAttribute(attr.name, attr.value);
         });
 
+        // If navbar differs across portals, swap navbar too
+        const newNav = doc.querySelector('.navbar');
+        const curNav = document.querySelector('.navbar');
+        if (newNav && curNav && newNav.querySelector('.navbar-brand')?.getAttribute('href') !== curNav.querySelector('.navbar-brand')?.getAttribute('href')) {
+          curNav.innerHTML = newNav.innerHTML;
+          Array.from(newNav.attributes).forEach(attr => curNav.setAttribute(attr.name, attr.value));
+        }
+
         // Sync navigation active links
         this.updateNavLinks(displayUrl, doc);
 
@@ -291,6 +299,11 @@
 
       // Dispatch route change events (pages initialize on this event)
       window.dispatchEvent(new CustomEvent('msms:routechange', { detail: { url: displayUrl } }));
+
+      // Ensure Auth navbar state is synchronized after scripts run
+      if (window.Auth && typeof window.Auth.initNav === 'function') {
+        window.Auth.initNav();
+      }
     },
 
     updateNavLinks(targetUrl, newDoc) {
@@ -389,8 +402,8 @@
           const href = a.getAttribute('href');
           const target = a.getAttribute('target');
 
-          // Ignore special links, modals, or target="_blank"
-          if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('http:') || href.startsWith('https:') || href.startsWith('mailto:') || href.startsWith('tel:') || target === '_blank' || a.hasAttribute('data-bs-toggle') || a.hasAttribute('data-bs-dismiss')) {
+          // Ignore special links, modals, target="_blank", or explicitly marked no-spa links
+          if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('http:') || href.startsWith('https:') || href.startsWith('mailto:') || href.startsWith('tel:') || target === '_blank' || a.hasAttribute('data-bs-toggle') || a.hasAttribute('data-bs-dismiss') || a.getAttribute('data-no-spa') === 'true' || a.hasAttribute('data-no-spa')) {
             return;
           }
 

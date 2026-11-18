@@ -11,7 +11,8 @@
     "seed:data": "node src/scripts/seedData.js",
     "test": "node tests/verifyAllFlows.js",
     "test:all": "node tests/automatedTests.js",
-    "test:routing": "node tests/verifyRoutingAndAuth.js"
+    "test:routing": "node tests/verifyRoutingAndAuth.js",
+    "test:issues": "node tests/verifyFourIssues.js"
   },
   "keywords": [
     "mobile-service",
